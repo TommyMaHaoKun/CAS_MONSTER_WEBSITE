@@ -371,6 +371,18 @@ body {
     margin-bottom: 10px;
 }
 
+/* Disclaimer */
+.disclaimer {
+    background: #FFF8E1;
+    border: 1px solid #FFE082;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #5D4037;
+    line-height: 1.5;
+}
+
 /* Footer */
 .app-footer {
     padding: 6px 0;
