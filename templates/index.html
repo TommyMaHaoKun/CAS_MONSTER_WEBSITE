@@ -107,11 +107,17 @@
                             </div>
                             <div class="form-row">
                                 <label class="form-label">Start date</label>
-                                <input type="date" id="batch-start" class="form-input">
+                                <div class="date-picker-wrap">
+                                    <input type="text" id="batch-start" class="form-input" readonly placeholder="Select start date">
+                                    <div id="cal-batch-start" class="cal-dropdown"></div>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <label class="form-label">End date</label>
-                                <input type="date" id="batch-end" class="form-input">
+                                <div class="date-picker-wrap">
+                                    <input type="text" id="batch-end" class="form-input" readonly placeholder="Select end date">
+                                    <div id="cal-batch-end" class="cal-dropdown"></div>
+                                </div>
                             </div>
                             <div class="form-row">
                                 <label class="form-label">Periodic activity<br><small>(optional)</small></label>
