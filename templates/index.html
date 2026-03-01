@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAS Autofill - WFLA</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- Title Bar -->
+    <header class="title-bar">
+        <div class="title-inner">
+            <h1 class="app-title">CAS Autofill</h1>
+            <span class="app-subtitle">Records + Reflection + Weekly Batch</span>
+        </div>
+    </header>
+    <div class="divider"></div>
+
+    <main class="app-root">
+        <div class="layout">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <h2 class="section-header">Configuration</h2>
+
+                <!-- Account Card -->
+                <div class="card">
+                    <div class="card-title">Account</div>
+                    <div class="form-row">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="username" class="form-input" placeholder="Login account">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">Password</label>
+                        <input type="password" id="password" class="form-input" placeholder="Password">
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label"></label>
+                        <button id="btn-fetch-clubs" class="btn btn-fetch" onclick="fetchClubs()">Fetch clubs</button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab-headers">
+                        <button class="tab-btn active" data-tab="tab-records">Activity Records</button>
+                        <button class="tab-btn" data-tab="tab-batch">Weekly Batch Records</button>
+                        <button class="tab-btn" data-tab="tab-reflection">Activity Reflection</button>
+                        <button class="tab-btn" data-tab="tab-log">Log</button>
+                    </div>
+
+                    <!-- Activity Records Tab -->
+                    <div class="tab-content active" id="tab-records">
+                        <div class="card">
+                            <div class="card-title">Single Record</div>
+                            <div class="form-row">
+                                <label class="form-label">Club</label>
+                                <select id="rec-club" class="form-select" disabled>
+                                    <option value="">Fetch clubs first</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Date</label>
+                                <input type="date" id="rec-date" class="form-input">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Activity theme</label>
+                                <input type="text" id="rec-theme" class="form-input" placeholder="e.g. Cold War Origins Discussion">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Hours (C/A/S)</label>
+                                <div class="hours-group">
+                                    <span>C</span><input type="text" id="rec-c" class="form-input-sm" placeholder="0">
+                                    <span>A</span><input type="text" id="rec-a" class="form-input-sm" placeholder="0">
+                                    <span>S</span><input type="text" id="rec-s" class="form-input-sm" placeholder="0">
+                                </div>
+                            </div>
+                        </div>
+                        <button id="btn-run-record" class="btn btn-accent" onclick="runRecord()">Run single record</button>
+                    </div>
+
+                    <!-- Weekly Batch Tab -->
+                    <div class="tab-content" id="tab-batch">
+                        <div class="card">
+                            <div class="card-title">Weekly Batch Records</div>
+                            <div class="form-row">
+                                <label class="form-label">Club</label>
+                                <select id="batch-club" class="form-select" disabled>
+                                    <option value="">Fetch clubs first</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Club description</label>
+                                <input type="text" id="batch-club-desc" class="form-input" placeholder="Brief club description">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Weekday</label>
+                                <select id="batch-weekday" class="form-select">
+                                    <option value="">Select weekday</option>
+                                    <option>Monday</option>
+                                    <option>Tuesday</option>
+                                    <option>Wednesday</option>
+                                    <option>Thursday</option>
+                                    <option>Friday</option>
+                                    <option>Saturday</option>
+                                    <option>Sunday</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Start date</label>
+                                <input type="date" id="batch-start" class="form-input">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">End date</label>
+                                <input type="date" id="batch-end" class="form-input">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Periodic activity<br><small>(optional)</small></label>
+                                <input type="text" id="batch-periodic" class="form-input" placeholder="Optional recurring activity">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Hours (C/A/S)</label>
+                                <div class="hours-group">
+                                    <span>C</span><input type="text" id="batch-c" class="form-input-sm" placeholder="0">
+                                    <span>A</span><input type="text" id="batch-a" class="form-input-sm" placeholder="0">
+                                    <span>S</span><input type="text" id="batch-s" class="form-input-sm" placeholder="0">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Theme/Description</label>
+                                <span class="text-muted">Generated automatically by DeepSeek</span>
+                            </div>
+                        </div>
+                        <button id="btn-run-batch" class="btn btn-accent" onclick="runBatch()">Run weekly batch</button>
+                    </div>
+
+                    <!-- Reflection Tab -->
+                    <div class="tab-content" id="tab-reflection">
+                        <div class="card">
+                            <div class="card-title">Reflection</div>
+                            <div class="form-row">
+                                <label class="form-label">Club</label>
+                                <select id="ref-club" class="form-select" disabled>
+                                    <option value="">Fetch clubs first</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Number of reflections</label>
+                                <input type="number" id="ref-count" class="form-input" value="1" min="1">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Club description</label>
+                                <input type="text" id="ref-club-desc" class="form-input" placeholder="Brief club description">
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Titles<br><small>(one per line)</small></label>
+                                <textarea id="ref-titles" class="form-textarea" rows="4" placeholder="One title per line"></textarea>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Reflection descriptions<br><small>(optional, one per line)</small></label>
+                                <textarea id="ref-descs" class="form-textarea" rows="4" placeholder="Optional: one description per line"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title">Learning Outcomes</div>
+                            <div class="outcomes-grid">
+                                <label class="outcome-check"><input type="checkbox" value="Awareness"> Awareness</label>
+                                <label class="outcome-check"><input type="checkbox" value="Challenge"> Challenge</label>
+                                <label class="outcome-check"><input type="checkbox" value="Initiative"> Initiative</label>
+                                <label class="outcome-check"><input type="checkbox" value="Collaboration"> Collaboration</label>
+                                <label class="outcome-check"><input type="checkbox" value="Commitment"> Commitment</label>
+                                <label class="outcome-check"><input type="checkbox" value="Global Value"> Global Value</label>
+                                <label class="outcome-check"><input type="checkbox" value="Ethics"> Ethics</label>
+                                <label class="outcome-check"><input type="checkbox" value="New Skills"> New Skills</label>
+                            </div>
+                        </div>
+                        <button id="btn-run-reflection" class="btn btn-accent" onclick="runReflection()">Run reflection autofill</button>
+                    </div>
+
+                    <!-- Log Tab -->
+                    <div class="tab-content" id="tab-log">
+                        <div class="card-title">Runtime Log</div>
+                        <div class="divider-light"></div>
+                        <div id="log-output" class="log-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="right-panel">
+                <h3 class="panel-header">Preview</h3>
+                <div class="divider-light"></div>
+
+                <div class="preview-tabs">
+                    <div class="preview-tab-headers">
+                        <button class="preview-tab-btn active" data-ptab="ptab-record">Record</button>
+                        <button class="preview-tab-btn" data-ptab="ptab-reflection">Reflection</button>
+                    </div>
+
+                    <div class="preview-tab-content active" id="ptab-record">
+                        <div id="preview-record" class="preview-box">No preview yet.</div>
+                    </div>
+
+                    <div class="preview-tab-content" id="ptab-reflection">
+                        <div class="preview-label">Content Summary (20 words)</div>
+                        <div id="preview-summary" class="preview-box preview-box-sm">No preview yet.</div>
+                        <div class="preview-label">Reflection content (&ge; 550 words)</div>
+                        <div id="preview-reflection" class="preview-box">No preview yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="divider-light footer-divider"></div>
+        <footer class="app-footer">
+            <span class="text-muted">V5.0.0 Web | Powered by DeepSeek</span>
+        </footer>
+    </main>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/script.js"></script>
+</body>
+</html>
