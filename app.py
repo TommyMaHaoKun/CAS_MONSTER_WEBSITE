@@ -2,6 +2,7 @@
 CAS Monster Website - Flask Backend
 Mirrors CAS_AUTOFILL.py functionality as a web application.
 """
+import os
 import re
 import time
 import json
@@ -18,7 +19,7 @@ URL = "http://101.227.232.33:8001/"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_CHAT_ENDPOINT = f"{DEEPSEEK_BASE_URL}/v1/chat/completions"
 CONVERSATION_CLUB = "谈话记录(Conversation)"
-DEEPSEEK_API_KEY = "sk-28044a2771564890bd0dcdb090919b29"
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "cas-monster-secret"
@@ -705,6 +706,5 @@ def index():
 
 
 if __name__ == "__main__":
-    import os
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, debug=False, allow_unsafe_werkzeug=True)
