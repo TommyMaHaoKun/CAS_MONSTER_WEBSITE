@@ -406,6 +406,95 @@ body {
     }
 }
 
+/* Custom Calendar Date Picker */
+.date-picker-wrap {
+    position: relative;
+    flex: 1;
+}
+.cal-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    padding: 8px;
+    width: 300px;
+    margin-top: 4px;
+}
+.cal-dropdown.open {
+    display: block;
+}
+.cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+.cal-nav-btn {
+    background: none;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cal-nav-btn:hover {
+    background: var(--hover);
+}
+.cal-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+.cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.cal-header {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 4px 0;
+}
+.cal-day {
+    text-align: center;
+    font-size: 12px;
+    padding: 6px 0;
+    border-radius: 4px;
+    cursor: default;
+}
+.cal-day.cal-allowed {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+}
+.cal-day.cal-allowed:hover {
+    background: #A8C7FA;
+}
+.cal-day.cal-disabled {
+    color: var(--muted);
+    background: var(--surface);
+    opacity: 0.4;
+}
+.cal-day.cal-dim {
+    opacity: 0.3;
+}
+.cal-day.cal-dim.cal-allowed {
+    opacity: 0.6;
+}
+
 /* Loading spinner */
 .spinner {
     display: inline-block;

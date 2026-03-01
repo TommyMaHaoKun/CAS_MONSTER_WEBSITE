@@ -105,9 +105,133 @@ function setButtonsRunning(running) {
 }
 
 function formatDateForBackend(dateStr) {
-    // HTML date input gives YYYY-MM-DD, backend expects YYYY/MM/DD
     return dateStr.replace(/-/g, "/");
 }
+
+// ---- Custom Calendar Date Picker (weekday filtering) ----
+const WEEKDAY_MAP = { Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 0 };
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function createCalendar(calId, inputId) {
+    const cal = document.getElementById(calId);
+    const input = document.getElementById(inputId);
+    let viewYear, viewMonth;
+
+    const today = new Date();
+    viewYear = today.getFullYear();
+    viewMonth = today.getMonth();
+
+    input.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const weekday = document.getElementById("batch-weekday").value;
+        if (!weekday) { alert("Please select a weekday first."); return; }
+        // Close other calendar
+        document.querySelectorAll(".cal-dropdown").forEach((c) => { if (c.id !== calId) c.classList.remove("open"); });
+        cal.classList.toggle("open");
+        if (cal.classList.contains("open")) render();
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!cal.contains(e.target) && e.target !== input) cal.classList.remove("open");
+    });
+
+    function getWeekdayIndex() {
+        const w = document.getElementById("batch-weekday").value;
+        return w ? WEEKDAY_MAP[w] : -1;
+    }
+
+    function render() {
+        const allowedDay = getWeekdayIndex();
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+
+        let html = `<div class="cal-nav">
+            <button class="cal-nav-btn" data-action="prev-year">&laquo;</button>
+            <button class="cal-nav-btn" data-action="prev-month">&lsaquo;</button>
+            <span class="cal-title">${MONTH_NAMES[viewMonth]} ${viewYear}</span>
+            <button class="cal-nav-btn" data-action="next-month">&rsaquo;</button>
+            <button class="cal-nav-btn" data-action="next-year">&raquo;</button>
+        </div>`;
+        html += `<div class="cal-grid">`;
+        ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach((d) => { html += `<div class="cal-header">${d}</div>`; });
+
+        // Adjust firstDay to Monday-based (0=Mon)
+        const startOffset = (firstDay + 6) % 7;
+
+        for (let i = 0; i < 42; i++) {
+            let dayNum = i - startOffset + 1;
+            let inMonth = true;
+            let dispYear = viewYear, dispMonth = viewMonth, dispDay;
+
+            if (dayNum < 1) {
+                // Previous month
+                inMonth = false;
+                const pm = viewMonth === 0 ? 11 : viewMonth - 1;
+                const py = viewMonth === 0 ? viewYear - 1 : viewYear;
+                dispDay = daysInPrev + dayNum;
+                dispYear = py; dispMonth = pm;
+            } else if (dayNum > daysInMonth) {
+                inMonth = false;
+                const nm = viewMonth === 11 ? 0 : viewMonth + 1;
+                const ny = viewMonth === 11 ? viewYear + 1 : viewYear;
+                dispDay = dayNum - daysInMonth;
+                dispYear = ny; dispMonth = nm;
+            } else {
+                dispDay = dayNum;
+            }
+
+            const dateObj = new Date(dispYear, dispMonth, dispDay);
+            const isAllowed = dateObj.getDay() === allowedDay;
+            const dateStr = `${dispYear}/${String(dispMonth + 1).padStart(2, "0")}/${String(dispDay).padStart(2, "0")}`;
+
+            let cls = "cal-day";
+            if (!inMonth) cls += " cal-dim";
+            if (isAllowed) cls += " cal-allowed";
+            else cls += " cal-disabled";
+
+            if (isAllowed) {
+                html += `<div class="${cls}" data-date="${dateStr}">${dispDay}</div>`;
+            } else {
+                html += `<div class="${cls}">${dispDay}</div>`;
+            }
+        }
+        html += `</div>`;
+        cal.innerHTML = html;
+
+        // Bind nav buttons
+        cal.querySelectorAll(".cal-nav-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === "prev-year") viewYear--;
+                else if (action === "next-year") viewYear++;
+                else if (action === "prev-month") { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } }
+                else if (action === "next-month") { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } }
+                render();
+            });
+        });
+
+        // Bind day clicks
+        cal.querySelectorAll(".cal-day.cal-allowed").forEach((el) => {
+            el.addEventListener("click", (e) => {
+                e.stopPropagation();
+                input.value = el.dataset.date;
+                cal.classList.remove("open");
+            });
+        });
+    }
+}
+
+// Initialize calendars for batch start/end
+createCalendar("cal-batch-start", "batch-start");
+createCalendar("cal-batch-end", "batch-end");
+
+// Reset dates when weekday changes
+document.getElementById("batch-weekday").addEventListener("change", () => {
+    document.getElementById("batch-start").value = "";
+    document.getElementById("batch-end").value = "";
+});
 
 // ---- Actions ----
 function fetchClubs() {
