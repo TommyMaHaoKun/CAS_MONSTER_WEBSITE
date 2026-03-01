@@ -374,13 +374,11 @@ body {
 /* Disclaimer */
 .disclaimer {
     background: #FFF8E1;
-    border: 1px solid #FFE082;
-    border-radius: 6px;
-    padding: 10px 14px;
-    margin-top: 12px;
-    font-size: 12px;
+    border-bottom: 1px solid #FFE082;
+    padding: 8px 20px;
+    font-size: 11px;
     color: #5D4037;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
 /* Footer */
