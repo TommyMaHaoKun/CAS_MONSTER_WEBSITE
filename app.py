@@ -431,6 +431,8 @@ def handle_fetch_clubs(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
+                page.set_default_timeout(0)
+                page.set_default_navigation_timeout(0)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
@@ -489,6 +491,8 @@ def handle_run_record(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
+                page.set_default_timeout(0)
+                page.set_default_navigation_timeout(0)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
@@ -568,6 +572,8 @@ def handle_run_batch(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
+                page.set_default_timeout(0)
+                page.set_default_navigation_timeout(0)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
 
@@ -648,6 +654,8 @@ def handle_run_reflection(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
+                page.set_default_timeout(0)
+                page.set_default_navigation_timeout(0)
                 login_and_wait_home(page, user, pw)
                 refl_list_ctx = open_reflection_list_ctx(page)
 
