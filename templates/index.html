@@ -84,7 +84,11 @@
                                 </div>
                             </div>
                         </div>
-                        <button id="btn-run-record" class="btn btn-accent" onclick="runRecord()">Run single record</button>
+                        <div class="action-buttons">
+                            <button id="btn-gen-record" class="btn btn-accent" onclick="runRecord()">Generate</button>
+                            <button id="btn-confirm-record" class="btn btn-confirm" onclick="confirmRecord()" style="display:none">Confirm & Submit</button>
+                            <button id="btn-cancel-record" class="btn btn-cancel" onclick="cancelTask()" style="display:none">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Weekly Batch Tab -->
@@ -145,7 +149,11 @@
                                 <span class="text-muted">Generated automatically by DeepSeek</span>
                             </div>
                         </div>
-                        <button id="btn-run-batch" class="btn btn-accent" onclick="runBatch()">Run weekly batch</button>
+                        <div class="action-buttons">
+                            <button id="btn-gen-batch" class="btn btn-accent" onclick="runBatch()">Generate</button>
+                            <button id="btn-confirm-batch" class="btn btn-confirm" onclick="confirmBatch()" style="display:none">Confirm & Submit</button>
+                            <button id="btn-cancel-batch" class="btn btn-cancel" onclick="cancelTask()" style="display:none">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Reflection Tab -->
@@ -189,7 +197,11 @@
                                 <label class="outcome-check"><input type="checkbox" value="New Skills"> New Skills</label>
                             </div>
                         </div>
-                        <button id="btn-run-reflection" class="btn btn-accent" onclick="runReflection()">Run reflection autofill</button>
+                        <div class="action-buttons">
+                            <button id="btn-gen-reflection" class="btn btn-accent" onclick="runReflection()">Generate</button>
+                            <button id="btn-confirm-reflection" class="btn btn-confirm" onclick="confirmReflection()" style="display:none">Confirm & Submit</button>
+                            <button id="btn-cancel-reflection" class="btn btn-cancel" onclick="cancelTask()" style="display:none">Cancel</button>
+                        </div>
                     </div>
 
                     <!-- Log Tab -->

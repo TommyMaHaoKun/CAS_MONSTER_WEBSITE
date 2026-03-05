@@ -20,7 +20,50 @@ applyTheme(localStorage.getItem("cas-theme") || "light");
 const socket = io();
 
 // ---- State ----
-let isRunning = false;
+let taskPhase = "idle"; // "idle" | "generating" | "ready" | "submitting"
+let activeTask = null;  // "record" | "batch" | "reflection" | "fetch" | null
+
+// ---- Phase management ----
+function setPhase(phase, task) {
+    taskPhase = phase;
+    activeTask = task || null;
+
+    const genBtns = ["btn-gen-record", "btn-gen-batch", "btn-gen-reflection", "btn-fetch-clubs"];
+    const tasks = ["record", "batch", "reflection"];
+
+    // Hide all confirm/cancel buttons
+    tasks.forEach((t) => {
+        const c = document.getElementById("btn-confirm-" + t);
+        const x = document.getElementById("btn-cancel-" + t);
+        if (c) c.style.display = "none";
+        if (x) x.style.display = "none";
+    });
+
+    if (phase === "idle") {
+        genBtns.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = false;
+        });
+    } else {
+        // generating, ready, or submitting — disable all generate buttons
+        genBtns.forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = true;
+        });
+
+        if (task && tasks.includes(task)) {
+            if (phase === "generating" || phase === "submitting") {
+                const x = document.getElementById("btn-cancel-" + task);
+                if (x) x.style.display = "";
+            } else if (phase === "ready") {
+                const c = document.getElementById("btn-confirm-" + task);
+                const x = document.getElementById("btn-cancel-" + task);
+                if (c) c.style.display = "";
+                if (x) x.style.display = "";
+            }
+        }
+    }
+}
 
 // ---- Socket events ----
 socket.on("connect", () => {
@@ -38,13 +81,14 @@ socket.on("log", (data) => {
 socket.on("error", (data) => {
     appendLog("[Error] " + data.msg);
     alert(data.msg);
+    if (taskPhase !== "idle") setPhase("idle");
 });
 
 socket.on("clubs_fetched", (data) => {
     populateSelect("rec-club", data.clubs_records);
     populateSelect("batch-club", data.clubs_records);
     populateSelect("ref-club", data.clubs_reflection);
-    setButtonsRunning(false);
+    setPhase("idle");
     appendLog("[Clubs] Dropdowns updated.");
 });
 
@@ -57,8 +101,13 @@ socket.on("preview_reflection", (data) => {
     document.getElementById("preview-reflection").textContent = data.content;
 });
 
+socket.on("content_ready", (data) => {
+    setPhase("ready", data.task);
+    appendLog("[System] Content generated. Review preview, then click 'Confirm & Submit'.");
+});
+
 socket.on("task_done", () => {
-    setButtonsRunning(false);
+    setPhase("idle");
 });
 
 // ---- Tab switching ----
@@ -106,20 +155,6 @@ function getAccount() {
         throw new Error("Username/Password cannot be empty.");
     }
     return { username: user, password: pw };
-}
-
-function setButtonsRunning(running) {
-    isRunning = running;
-    const btns = [
-        "btn-fetch-clubs",
-        "btn-run-record",
-        "btn-run-batch",
-        "btn-run-reflection",
-    ];
-    btns.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = running;
-    });
 }
 
 function formatDateForBackend(dateStr) {
@@ -253,10 +288,10 @@ document.getElementById("batch-weekday").addEventListener("change", () => {
 
 // ---- Actions ----
 function fetchClubs() {
-    if (isRunning) return;
+    if (taskPhase !== "idle") return;
     try {
         const acc = getAccount();
-        setButtonsRunning(true);
+        setPhase("generating", "fetch");
         appendLog("[Clubs] Fetching clubs...");
         socket.emit("fetch_clubs", acc);
     } catch (e) {
@@ -265,7 +300,7 @@ function fetchClubs() {
 }
 
 function runRecord() {
-    if (isRunning) return;
+    if (taskPhase !== "idle") return;
     try {
         const acc = getAccount();
         const club = document.getElementById("rec-club").value;
@@ -279,8 +314,8 @@ function runRecord() {
         if (!date) throw new Error("Please select a date.");
         if (!theme) throw new Error("Activity theme cannot be empty.");
 
-        setButtonsRunning(true);
-        appendLog("[Records] Starting single record...");
+        setPhase("generating", "record");
+        appendLog("[Record] Generating...");
         socket.emit("run_record", {
             ...acc,
             club,
@@ -295,8 +330,20 @@ function runRecord() {
     }
 }
 
+function confirmRecord() {
+    if (taskPhase !== "ready" || activeTask !== "record") return;
+    try {
+        const acc = getAccount();
+        setPhase("submitting", "record");
+        appendLog("[Record] Submitting...");
+        socket.emit("confirm_record", acc);
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
 function runBatch() {
-    if (isRunning) return;
+    if (taskPhase !== "idle") return;
     try {
         const acc = getAccount();
         const club = document.getElementById("batch-club").value;
@@ -314,8 +361,8 @@ function runBatch() {
         if (!weekday) throw new Error("Please select a weekday.");
         if (!start || !end) throw new Error("Please select both start and end dates.");
 
-        setButtonsRunning(true);
-        appendLog("[Batch] Starting weekly batch...");
+        setPhase("generating", "batch");
+        appendLog("[Batch] Generating all content...");
         socket.emit("run_batch", {
             ...acc,
             club,
@@ -333,8 +380,20 @@ function runBatch() {
     }
 }
 
+function confirmBatch() {
+    if (taskPhase !== "ready" || activeTask !== "batch") return;
+    try {
+        const acc = getAccount();
+        setPhase("submitting", "batch");
+        appendLog("[Batch] Submitting all records...");
+        socket.emit("confirm_batch", acc);
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
 function runReflection() {
-    if (isRunning) return;
+    if (taskPhase !== "idle") return;
     try {
         const acc = getAccount();
         const club = document.getElementById("ref-club").value;
@@ -368,8 +427,8 @@ function runReflection() {
             throw new Error("Select at least one Learning Outcome.");
         }
 
-        setButtonsRunning(true);
-        appendLog("[Reflection] Starting reflection autofill...");
+        setPhase("generating", "reflection");
+        appendLog("[Reflection] Generating all content...");
         socket.emit("run_reflection", {
             ...acc,
             club,
@@ -380,5 +439,28 @@ function runReflection() {
         });
     } catch (e) {
         alert(e.message);
+    }
+}
+
+function confirmReflection() {
+    if (taskPhase !== "ready" || activeTask !== "reflection") return;
+    try {
+        const acc = getAccount();
+        setPhase("submitting", "reflection");
+        appendLog("[Reflection] Submitting all reflections...");
+        socket.emit("confirm_reflection", acc);
+    } catch (e) {
+        alert(e.message);
+    }
+}
+
+function cancelTask() {
+    if (taskPhase === "ready") {
+        // Discard pending content, go back to idle
+        setPhase("idle");
+        appendLog("[System] Discarded pending content.");
+    } else if (taskPhase === "generating" || taskPhase === "submitting") {
+        // Ask backend to stop
+        socket.emit("cancel");
     }
 }
