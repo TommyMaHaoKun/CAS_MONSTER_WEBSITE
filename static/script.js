@@ -271,14 +271,13 @@ function runRecord() {
         const club = document.getElementById("rec-club").value;
         const date = document.getElementById("rec-date").value;
         const theme = document.getElementById("rec-theme").value.trim();
-        const c = document.getElementById("rec-c").value.trim();
-        const a = document.getElementById("rec-a").value.trim();
-        const s = document.getElementById("rec-s").value.trim();
+        const c = document.getElementById("rec-c").value.trim() || "0";
+        const a = document.getElementById("rec-a").value.trim() || "0";
+        const s = document.getElementById("rec-s").value.trim() || "0";
 
         if (!club) throw new Error("Please fetch and select a club.");
         if (!date) throw new Error("Please select a date.");
         if (!theme) throw new Error("Activity theme cannot be empty.");
-        if (!c || !a || !s) throw new Error("All hours fields are required.");
 
         setButtonsRunning(true);
         appendLog("[Records] Starting single record...");
@@ -306,15 +305,14 @@ function runBatch() {
         const start = document.getElementById("batch-start").value;
         const end = document.getElementById("batch-end").value;
         const periodic = document.getElementById("batch-periodic").value.trim();
-        const c = document.getElementById("batch-c").value.trim();
-        const a = document.getElementById("batch-a").value.trim();
-        const s = document.getElementById("batch-s").value.trim();
+        const c = document.getElementById("batch-c").value.trim() || "0";
+        const a = document.getElementById("batch-a").value.trim() || "0";
+        const s = document.getElementById("batch-s").value.trim() || "0";
 
         if (!club) throw new Error("Please fetch and select a club.");
         if (!clubDesc) throw new Error("Club description cannot be empty.");
         if (!weekday) throw new Error("Please select a weekday.");
         if (!start || !end) throw new Error("Please select both start and end dates.");
-        if (!c || !a || !s) throw new Error("All hours fields are required.");
 
         setButtonsRunning(true);
         appendLog("[Batch] Starting weekly batch...");
