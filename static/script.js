@@ -22,21 +22,6 @@ const socket = io();
 // ---- State ----
 let isRunning = false;
 
-function setButtonsRunning(running) {
-    isRunning = running;
-    const runBtns = ["btn-run-record", "btn-run-batch", "btn-run-reflection", "btn-fetch-clubs"];
-    const cancelBtns = ["btn-cancel-record", "btn-cancel-batch", "btn-cancel-reflection"];
-
-    runBtns.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = running;
-    });
-    cancelBtns.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = running ? "" : "none";
-    });
-}
-
 // ---- Socket events ----
 socket.on("connect", () => {
     appendLog("[System] Connected to server.");
@@ -53,7 +38,6 @@ socket.on("log", (data) => {
 socket.on("error", (data) => {
     appendLog("[Error] " + data.msg);
     alert(data.msg);
-    setButtonsRunning(false);
 });
 
 socket.on("clubs_fetched", (data) => {
@@ -124,6 +108,20 @@ function getAccount() {
     return { username: user, password: pw };
 }
 
+function setButtonsRunning(running) {
+    isRunning = running;
+    const btns = [
+        "btn-fetch-clubs",
+        "btn-run-record",
+        "btn-run-batch",
+        "btn-run-reflection",
+    ];
+    btns.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = running;
+    });
+}
+
 function formatDateForBackend(dateStr) {
     return dateStr.replace(/-/g, "/");
 }
@@ -145,6 +143,7 @@ function createCalendar(calId, inputId) {
         e.stopPropagation();
         const weekday = document.getElementById("batch-weekday").value;
         if (!weekday) { alert("Please select a weekday first."); return; }
+        // Close other calendar
         document.querySelectorAll(".cal-dropdown").forEach((c) => { if (c.id !== calId) c.classList.remove("open"); });
         cal.classList.toggle("open");
         if (cal.classList.contains("open")) render();
@@ -161,7 +160,7 @@ function createCalendar(calId, inputId) {
 
     function render() {
         const allowedDay = getWeekdayIndex();
-        const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay(); // 0=Sun
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
         const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
 
@@ -175,6 +174,7 @@ function createCalendar(calId, inputId) {
         html += `<div class="cal-grid">`;
         ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach((d) => { html += `<div class="cal-header">${d}</div>`; });
 
+        // Adjust firstDay to Monday-based (0=Mon)
         const startOffset = (firstDay + 6) % 7;
 
         for (let i = 0; i < 42; i++) {
@@ -183,6 +183,7 @@ function createCalendar(calId, inputId) {
             let dispYear = viewYear, dispMonth = viewMonth, dispDay;
 
             if (dayNum < 1) {
+                // Previous month
                 inMonth = false;
                 const pm = viewMonth === 0 ? 11 : viewMonth - 1;
                 const py = viewMonth === 0 ? viewYear - 1 : viewYear;
@@ -216,6 +217,7 @@ function createCalendar(calId, inputId) {
         html += `</div>`;
         cal.innerHTML = html;
 
+        // Bind nav buttons
         cal.querySelectorAll(".cal-nav-btn").forEach((btn) => {
             btn.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -228,6 +230,7 @@ function createCalendar(calId, inputId) {
             });
         });
 
+        // Bind day clicks
         cal.querySelectorAll(".cal-day.cal-allowed").forEach((el) => {
             el.addEventListener("click", (e) => {
                 e.stopPropagation();
@@ -238,9 +241,11 @@ function createCalendar(calId, inputId) {
     }
 }
 
+// Initialize calendars for batch start/end
 createCalendar("cal-batch-start", "batch-start");
 createCalendar("cal-batch-end", "batch-end");
 
+// Reset dates when weekday changes
 document.getElementById("batch-weekday").addEventListener("change", () => {
     document.getElementById("batch-start").value = "";
     document.getElementById("batch-end").value = "";
@@ -376,8 +381,4 @@ function runReflection() {
     } catch (e) {
         alert(e.message);
     }
-}
-
-function cancelTask() {
-    socket.emit("cancel");
 }
