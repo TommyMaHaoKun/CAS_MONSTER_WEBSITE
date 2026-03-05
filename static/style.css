@@ -566,3 +566,30 @@ body {
 .theme-toggle:hover {
     background: var(--hover);
 }
+
+/* Action buttons (Generate / Confirm / Cancel) */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+}
+.action-buttons .btn {
+    margin-top: 0;
+}
+.btn-confirm {
+    background: var(--success);
+    color: white;
+    padding: 10px 24px;
+}
+.btn-confirm:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
+.btn-cancel {
+    background: var(--danger);
+    color: white;
+    padding: 10px 24px;
+}
+.btn-cancel:hover:not(:disabled) {
+    filter: brightness(0.9);
+}
