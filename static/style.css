@@ -415,6 +415,13 @@ body {
     padding: 6px 0;
     text-align: right;
 }
+.footer-link {
+    color: var(--accent);
+    text-decoration: none;
+}
+.footer-link:hover {
+    text-decoration: underline;
+}
 .footer-divider {
     margin-top: 10px;
 }
