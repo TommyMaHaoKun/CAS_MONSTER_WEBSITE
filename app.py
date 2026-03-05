@@ -26,10 +26,8 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = "cas-monster-secret"
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
-# --------------- Session Store ---------------
-sessions = {}       # sid -> {"cookies": list, "username": str, "password": str}
+# --------------- Cancel flags ---------------
 cancel_flags = {}   # sid -> bool
-pending_data = {}   # sid -> {"task": str, "entries": list, "params": dict}
 
 # --------------- Helpers ---------------
 
@@ -273,9 +271,9 @@ def generate_reflection_content_deepseek(api_key, club_name, title, club_desc=""
 
 # --------------- Playwright automation ---------------
 
-def _find_iframe_src_contains(page, must_contain, timeout_ms=60000):
-    end = time.time() + timeout_ms / 1000
-    while time.time() < end:
+def _find_iframe_src_contains(page, must_contain, timeout_ms=None):
+    end = (time.time() + timeout_ms / 1000) if timeout_ms is not None else None
+    while end is None or time.time() < end:
         for h in page.locator("iframe").element_handles():
             src = h.get_attribute("src") or ""
             if src and all(s in src for s in must_contain):
@@ -326,20 +324,6 @@ def select_date_layui(scope, target_year, target_month, target_day):
 
 def login_and_wait_home(page, user, pw):
     page.goto(URL, wait_until="domcontentloaded")
-    page.fill("input[placeholder='Please enter your login account']", user)
-    page.fill("input[placeholder='Please enter your password']", pw)
-    page.click("button.login-btn")
-    page.wait_for_selector("text=WFLA高中综合系统")
-
-
-def login_or_restore(page, user, pw):
-    """Navigate to URL; skip login if session cookies are still valid."""
-    page.goto(URL, wait_until="domcontentloaded")
-    try:
-        page.wait_for_selector("text=WFLA高中综合系统", timeout=5000)
-        return
-    except Exception:
-        pass
     page.fill("input[placeholder='Please enter your login account']", user)
     page.fill("input[placeholder='Please enter your password']", pw)
     page.click("button.login-btn")
@@ -449,10 +433,7 @@ def emit_log(sid, msg):
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    sid = request.sid
-    sessions.pop(sid, None)
-    cancel_flags.pop(sid, None)
-    pending_data.pop(sid, None)
+    cancel_flags.pop(request.sid, None)
 
 
 @socketio.on("cancel")
@@ -481,8 +462,6 @@ def handle_fetch_clubs(data):
                 page.set_default_timeout(0)
                 page.set_default_navigation_timeout(0)
                 login_and_wait_home(page, user, pw)
-                cookies = page.context.cookies()
-                sessions[sid] = {"cookies": cookies, "username": user, "password": pw}
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
                 clubs = list_clubs_in_add_dialog(add_ctx)
@@ -504,11 +483,8 @@ def handle_fetch_clubs(data):
     threading.Thread(target=task, daemon=True).start()
 
 
-# ---- Single Record (two-phase) ----
-
 @socketio.on("run_record")
 def handle_run_record(data):
-    """Phase 1: Generate record text via AI."""
     sid = request.sid
     user = data.get("username", "").strip()
     pw = data.get("password", "").strip()
@@ -533,99 +509,54 @@ def handle_run_record(data):
 
     def task():
         try:
-            emit_log(sid, "[Record] Generating description via DeepSeek...")
+            from playwright.sync_api import sync_playwright
+            emit_log(sid, "[Records] Generating description via DeepSeek...")
             desc = generate_activity_record_deepseek(
                 api_key=DEEPSEEK_API_KEY, club_name=club, date_ymd=date_ymd,
                 theme=theme, c_hours=c, a_hours=a, s_hours=s,
             )
             socketio.emit("preview_record", {"text": desc}, to=sid)
-            pending_data[sid] = {
-                "task": "record",
-                "entries": [{"date_ymd": date_ymd, "year": y, "month": mo, "day": d,
-                             "theme": theme, "desc": desc}],
-                "params": {"club": club, "c": c, "a": a, "s": s},
-            }
-            emit_log(sid, "[Record] Generated. Review preview, then click 'Confirm & Submit'.")
-            socketio.emit("content_ready", {"task": "record"}, to=sid)
-        except Exception as e:
-            emit_log(sid, f"[Record] Error: {e}")
-            socketio.emit("task_done", {"task": "record"}, to=sid)
-
-    threading.Thread(target=task, daemon=True).start()
-
-
-@socketio.on("confirm_record")
-def handle_confirm_record(data):
-    """Phase 2: Fill the form in browser."""
-    sid = request.sid
-    pd = pending_data.pop(sid, None)
-    if not pd or pd["task"] != "record":
-        emit("error", {"msg": "No pending record to confirm."})
-        return
-
-    session = sessions.get(sid, {})
-    user = data.get("username", "").strip() or session.get("username", "")
-    pw = data.get("password", "").strip() or session.get("password", "")
-    cancel_flags[sid] = False
-
-    def task():
-        try:
-            from playwright.sync_api import sync_playwright
-            entry = pd["entries"][0]
-            params = pd["params"]
-            cookies = session.get("cookies")
-
-            emit_log(sid, "[Record] Submitting to WFLA...")
+            emit_log(sid, "[Records] Description generated. Now autofilling...")
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
-                context = browser.new_context()
-                if cookies:
-                    context.add_cookies(cookies)
-                page = context.new_page()
+                page = browser.new_page()
                 page.set_default_timeout(0)
                 page.set_default_navigation_timeout(0)
-                login_or_restore(page, user, pw)
-
+                login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
 
-                emit_log(sid, f"[Record] Selecting club: {params['club']}")
-                select_club_by_text(add_ctx, params["club"])
+                emit_log(sid, f"[Records] Selecting club: {club}")
+                select_club_by_text(add_ctx, club)
 
                 date_input = add_ctx.locator("div.layui-form-item:has(label:has-text('Event date')) input")
                 date_input.click()
                 cal_scope = add_ctx if add_ctx.locator("#layui-laydate1").count() else page
-                select_date_layui(cal_scope, entry["year"], entry["month"], entry["day"])
-                emit_log(sid, f"[Record] Date selected: {entry['date_ymd']}")
+                select_date_layui(cal_scope, y, mo, d)
+                emit_log(sid, f"[Records] Date selected: {date_ymd}")
 
-                add_ctx.locator("div.layui-form-item:has(label:has-text('Activity theme')) input").fill(entry["theme"])
-                add_ctx.locator("input[name='CDuration']").fill(params["c"])
-                add_ctx.locator("input[name='ADuration']").fill(params["a"])
-                add_ctx.locator("input[name='SDuration']").fill(params["s"])
-                add_ctx.locator("textarea[name='Reflection']").fill(entry["desc"])
+                add_ctx.locator("div.layui-form-item:has(label:has-text('Activity theme')) input").fill(theme)
+                add_ctx.locator("input[name='CDuration']").fill(c)
+                add_ctx.locator("input[name='ADuration']").fill(a)
+                add_ctx.locator("input[name='SDuration']").fill(s)
+                add_ctx.locator("textarea[name='Reflection']").fill(desc)
                 add_ctx.locator("button[lay-filter='add']:has-text('Save')").click()
-                emit_log(sid, "[Record] Saved.")
+                emit_log(sid, "[Records] Save clicked.")
                 time.sleep(2)
-
-                if sid in sessions:
-                    sessions[sid]["cookies"] = context.cookies()
                 browser.close()
 
-            emit_log(sid, "[Record] Done.")
+            emit_log(sid, "[Records] Run finished.")
             socketio.emit("task_done", {"task": "record"}, to=sid)
         except Exception as e:
-            emit_log(sid, f"[Record] Error: {e}")
+            emit_log(sid, f"[Records] Error: {e}")
             socketio.emit("task_done", {"task": "record"}, to=sid)
 
     threading.Thread(target=task, daemon=True).start()
 
 
-# ---- Batch Records (two-phase) ----
-
 @socketio.on("run_batch")
 def handle_run_batch(data):
-    """Phase 1: Pre-generate ALL themes + descriptions via AI."""
     sid = request.sid
     user = data.get("username", "").strip()
     pw = data.get("password", "").strip()
@@ -668,9 +599,11 @@ def handle_run_batch(data):
         used_descs = []
         entries = []
         try:
+            from playwright.sync_api import sync_playwright
             total = len(dates)
-            emit_log(sid, f"[Batch] Generating {total} weekly themes + descriptions...")
 
+            # Phase 1: Pre-generate ALL themes + descriptions
+            emit_log(sid, f"[Batch] Phase 1: Generating {total} weekly themes + descriptions...")
             for idx, dt_item in enumerate(dates, start=1):
                 if cancel_flags.get(sid):
                     emit_log(sid, "[Batch] Cancelled during generation.")
@@ -698,56 +631,17 @@ def handle_run_batch(data):
                     "text": f"[{idx}/{total}] {date_ymd}\n{theme}\n\n{desc}"
                 }, to=sid)
 
-            pending_data[sid] = {
-                "task": "batch",
-                "entries": entries,
-                "params": {"club": club, "c": c, "a": a, "s": s},
-            }
-            emit_log(sid, f"[Batch] All {total} entries generated. Review preview, then click 'Confirm & Submit'.")
-            socketio.emit("content_ready", {"task": "batch"}, to=sid)
-        except Exception as e:
-            emit_log(sid, f"[Batch] Error: {e}")
-            socketio.emit("task_done", {"task": "batch"}, to=sid)
-
-    threading.Thread(target=task, daemon=True).start()
-
-
-@socketio.on("confirm_batch")
-def handle_confirm_batch(data):
-    """Phase 2: Fill all records in browser using pre-generated content."""
-    sid = request.sid
-    pd = pending_data.pop(sid, None)
-    if not pd or pd["task"] != "batch":
-        emit("error", {"msg": "No pending batch to confirm."})
-        return
-
-    session = sessions.get(sid, {})
-    user = data.get("username", "").strip() or session.get("username", "")
-    pw = data.get("password", "").strip() or session.get("password", "")
-    cancel_flags[sid] = False
-
-    def task():
-        try:
-            from playwright.sync_api import sync_playwright
-            entries = pd["entries"]
-            params = pd["params"]
-            cookies = session.get("cookies")
-
-            emit_log(sid, f"[Batch] Submitting {len(entries)} records to WFLA...")
+            # Phase 2: Fill all records in browser
+            emit_log(sid, f"[Batch] Phase 2: Filling {total} records...")
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
-                context = browser.new_context()
-                if cookies:
-                    context.add_cookies(cookies)
-                page = context.new_page()
+                page = browser.new_page()
                 page.set_default_timeout(0)
                 page.set_default_navigation_timeout(0)
-                login_or_restore(page, user, pw)
-
+                login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
 
-                total = len(entries)
                 for idx, entry in enumerate(entries, start=1):
                     if cancel_flags.get(sid):
                         emit_log(sid, f"[Batch] Cancelled at {idx}/{total}. Previous records already saved.")
@@ -755,7 +649,7 @@ def handle_confirm_batch(data):
 
                     emit_log(sid, f"[Batch] ({idx}/{total}) Filling {entry['date_ymd']}...")
                     add_ctx = open_add_record_ctx(record_list_ctx, page)
-                    select_club_by_text(add_ctx, params["club"])
+                    select_club_by_text(add_ctx, club)
 
                     date_input = add_ctx.locator("div.layui-form-item:has(label:has-text('Event date')) input")
                     date_input.click()
@@ -763,9 +657,9 @@ def handle_confirm_batch(data):
                     select_date_layui(cal_scope, entry["year"], entry["month"], entry["day"])
 
                     add_ctx.locator("div.layui-form-item:has(label:has-text('Activity theme')) input").fill(entry["theme"])
-                    add_ctx.locator("input[name='CDuration']").fill(params["c"])
-                    add_ctx.locator("input[name='ADuration']").fill(params["a"])
-                    add_ctx.locator("input[name='SDuration']").fill(params["s"])
+                    add_ctx.locator("input[name='CDuration']").fill(c)
+                    add_ctx.locator("input[name='ADuration']").fill(a)
+                    add_ctx.locator("input[name='SDuration']").fill(s)
                     add_ctx.locator("textarea[name='Reflection']").fill(entry["desc"])
                     add_ctx.locator("button[lay-filter='add']:has-text('Save')").click()
                     emit_log(sid, f"[Batch] ({idx}/{total}) Saved.")
@@ -775,11 +669,9 @@ def handle_confirm_batch(data):
                     except Exception:
                         time.sleep(1.2)
 
-                if sid in sessions:
-                    sessions[sid]["cookies"] = context.cookies()
                 browser.close()
 
-            emit_log(sid, "[Batch] Submission finished.")
+            emit_log(sid, "[Batch] Run finished.")
             socketio.emit("task_done", {"task": "batch"}, to=sid)
         except Exception as e:
             emit_log(sid, f"[Batch] Error: {e}")
@@ -788,11 +680,8 @@ def handle_confirm_batch(data):
     threading.Thread(target=task, daemon=True).start()
 
 
-# ---- Reflection (two-phase, parallel AI) ----
-
 @socketio.on("run_reflection")
 def handle_run_reflection(data):
-    """Phase 1: Generate all summaries + contents (summary || content in parallel per entry)."""
     sid = request.sid
     user = data.get("username", "").strip()
     pw = data.get("password", "").strip()
@@ -816,9 +705,11 @@ def handle_run_reflection(data):
     def task():
         entries = []
         try:
+            from playwright.sync_api import sync_playwright
             total = len(titles)
-            emit_log(sid, f"[Reflection] Generating {total} reflections (parallel summary + content)...")
 
+            # Phase 1: Pre-generate all summaries + contents (parallel per entry)
+            emit_log(sid, f"[Reflection] Phase 1: Generating {total} reflections (parallel summary + content)...")
             for idx, title in enumerate(titles, start=1):
                 if cancel_flags.get(sid):
                     emit_log(sid, "[Reflection] Cancelled during generation.")
@@ -843,56 +734,17 @@ def handle_run_reflection(data):
                 entries.append({"title": title, "summary": summary, "content": content})
                 socketio.emit("preview_reflection", {"summary": summary, "content": content}, to=sid)
 
-            pending_data[sid] = {
-                "task": "reflection",
-                "entries": entries,
-                "params": {"club": club, "outcomes": selected},
-            }
-            emit_log(sid, f"[Reflection] All {total} entries generated. Review preview, then click 'Confirm & Submit'.")
-            socketio.emit("content_ready", {"task": "reflection"}, to=sid)
-        except Exception as e:
-            emit_log(sid, f"[Reflection] Error: {e}")
-            socketio.emit("task_done", {"task": "reflection"}, to=sid)
-
-    threading.Thread(target=task, daemon=True).start()
-
-
-@socketio.on("confirm_reflection")
-def handle_confirm_reflection(data):
-    """Phase 2: Fill all reflections in browser."""
-    sid = request.sid
-    pd = pending_data.pop(sid, None)
-    if not pd or pd["task"] != "reflection":
-        emit("error", {"msg": "No pending reflection to confirm."})
-        return
-
-    session = sessions.get(sid, {})
-    user = data.get("username", "").strip() or session.get("username", "")
-    pw = data.get("password", "").strip() or session.get("password", "")
-    cancel_flags[sid] = False
-
-    def task():
-        try:
-            from playwright.sync_api import sync_playwright
-            entries = pd["entries"]
-            params = pd["params"]
-            cookies = session.get("cookies")
-
-            emit_log(sid, f"[Reflection] Submitting {len(entries)} reflections to WFLA...")
+            # Phase 2: Fill all reflections in browser
+            emit_log(sid, f"[Reflection] Phase 2: Filling {total} reflections...")
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
-                context = browser.new_context()
-                if cookies:
-                    context.add_cookies(cookies)
-                page = context.new_page()
+                page = browser.new_page()
                 page.set_default_timeout(0)
                 page.set_default_navigation_timeout(0)
-                login_or_restore(page, user, pw)
-
+                login_and_wait_home(page, user, pw)
                 refl_list_ctx = open_reflection_list_ctx(page)
 
-                total = len(entries)
                 for idx, entry in enumerate(entries, start=1):
                     if cancel_flags.get(sid):
                         emit_log(sid, f"[Reflection] Cancelled at {idx}/{total}. Previous reflections already saved.")
@@ -901,13 +753,13 @@ def handle_confirm_reflection(data):
                     emit_log(sid, f"[Reflection] ({idx}/{total}) Filling '{entry['title']}'...")
                     add_ctx = open_add_reflection_ctx(refl_list_ctx, page)
 
-                    select_club_by_text(add_ctx, params["club"])
+                    select_club_by_text(add_ctx, club)
                     add_ctx.locator("input[name='Title']").fill(entry["title"])
                     add_ctx.locator("textarea[name='Summary']").fill(entry["summary"])
                     fill_kindeditor_body(add_ctx, entry["content"])
 
-                    emit_log(sid, f"[Reflection] ({idx}/{total}) Selecting outcomes: {', '.join(params['outcomes'])}")
-                    click_learning_outcomes(add_ctx, params["outcomes"])
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Selecting outcomes: {', '.join(selected)}")
+                    click_learning_outcomes(add_ctx, selected)
 
                     add_ctx.locator("button[lay-filter='add']:has-text('Save')").click()
                     emit_log(sid, f"[Reflection] ({idx}/{total}) Saved.")
@@ -917,11 +769,9 @@ def handle_confirm_reflection(data):
                     except Exception:
                         time.sleep(1.2)
 
-                if sid in sessions:
-                    sessions[sid]["cookies"] = context.cookies()
                 browser.close()
 
-            emit_log(sid, "[Reflection] Submission finished.")
+            emit_log(sid, "[Reflection] Run finished.")
             socketio.emit("task_done", {"task": "reflection"}, to=sid)
         except Exception as e:
             emit_log(sid, f"[Reflection] Error: {e}")
