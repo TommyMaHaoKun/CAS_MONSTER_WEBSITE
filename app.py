@@ -7,7 +7,6 @@ import re
 import time
 import json
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from datetime import date as dt_date, timedelta
 from typing import Optional
 
@@ -25,9 +24,6 @@ DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "cas-monster-secret"
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
-
-# --------------- Cancel flags ---------------
-cancel_flags = {}   # sid -> bool
 
 # --------------- Helpers ---------------
 
@@ -431,18 +427,6 @@ def emit_log(sid, msg):
     socketio.emit("log", {"msg": msg}, to=sid)
 
 
-@socketio.on("disconnect")
-def handle_disconnect():
-    cancel_flags.pop(request.sid, None)
-
-
-@socketio.on("cancel")
-def handle_cancel():
-    sid = request.sid
-    cancel_flags[sid] = True
-    emit_log(sid, "[System] Cancel requested.")
-
-
 @socketio.on("fetch_clubs")
 def handle_fetch_clubs(data):
     sid = request.sid
@@ -505,11 +489,9 @@ def handle_run_record(data):
         emit("error", {"msg": str(e)})
         return
 
-    cancel_flags[sid] = False
-
     def task():
         try:
-            from playwright.sync_api import sync_playwright
+            from playwright.sync_api import sync_playwright, TimeoutError as PWTimeoutError
             emit_log(sid, "[Records] Generating description via DeepSeek...")
             desc = generate_activity_record_deepseek(
                 api_key=DEEPSEEK_API_KEY, club_name=club, date_ymd=date_ymd,
@@ -592,47 +574,12 @@ def handle_run_batch(data):
         emit("error", {"msg": str(e)})
         return
 
-    cancel_flags[sid] = False
-
     def task():
         used_themes = []
         used_descs = []
-        entries = []
         try:
             from playwright.sync_api import sync_playwright
-            total = len(dates)
-
-            # Phase 1: Pre-generate ALL themes + descriptions
-            emit_log(sid, f"[Batch] Phase 1: Generating {total} weekly themes + descriptions...")
-            for idx, dt_item in enumerate(dates, start=1):
-                if cancel_flags.get(sid):
-                    emit_log(sid, "[Batch] Cancelled during generation.")
-                    socketio.emit("task_done", {"task": "batch"}, to=sid)
-                    return
-
-                date_ymd = f"{dt_item.year:04d}/{dt_item.month:02d}/{dt_item.day:02d}"
-                emit_log(sid, f"[Batch] ({idx}/{total}) Generating for {date_ymd}...")
-
-                theme, desc = generate_weekly_theme_desc_deepseek(
-                    api_key=DEEPSEEK_API_KEY, club_name=club, date_ymd=date_ymd,
-                    club_desc=club_desc, periodic_desc=periodic,
-                    used_themes=used_themes, used_descs=used_descs,
-                )
-                if not theme or not desc:
-                    raise RuntimeError(f"DeepSeek returned empty for {date_ymd}.")
-                used_themes.append(theme)
-                used_descs.append(desc)
-                entries.append({
-                    "date_ymd": date_ymd,
-                    "year": dt_item.year, "month": dt_item.month, "day": dt_item.day,
-                    "theme": theme, "desc": desc,
-                })
-                socketio.emit("preview_record", {
-                    "text": f"[{idx}/{total}] {date_ymd}\n{theme}\n\n{desc}"
-                }, to=sid)
-
-            # Phase 2: Fill all records in browser
-            emit_log(sid, f"[Batch] Phase 2: Filling {total} records...")
+            emit_log(sid, f"[Batch] Starting: {len(dates)} weekly records.")
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
@@ -642,27 +589,38 @@ def handle_run_batch(data):
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
 
-                for idx, entry in enumerate(entries, start=1):
-                    if cancel_flags.get(sid):
-                        emit_log(sid, f"[Batch] Cancelled at {idx}/{total}. Previous records already saved.")
-                        break
+                total = len(dates)
+                for idx, dt_item in enumerate(dates, start=1):
+                    date_ymd = f"{dt_item.year:04d}/{dt_item.month:02d}/{dt_item.day:02d}"
+                    emit_log(sid, f"[Batch] ({idx}/{total}) Generating theme + desc for {date_ymd}...")
 
-                    emit_log(sid, f"[Batch] ({idx}/{total}) Filling {entry['date_ymd']}...")
+                    theme, desc = generate_weekly_theme_desc_deepseek(
+                        api_key=DEEPSEEK_API_KEY, club_name=club, date_ymd=date_ymd,
+                        club_desc=club_desc, periodic_desc=periodic,
+                        used_themes=used_themes, used_descs=used_descs,
+                    )
+                    if not theme or not desc:
+                        raise RuntimeError(f"DeepSeek returned empty for {date_ymd}.")
+                    used_themes.append(theme)
+                    used_descs.append(desc)
+                    socketio.emit("preview_record", {"text": f"{theme}\n\n{desc}"}, to=sid)
+                    emit_log(sid, f"[Batch] ({idx}/{total}) Filling record...")
+
                     add_ctx = open_add_record_ctx(record_list_ctx, page)
                     select_club_by_text(add_ctx, club)
 
                     date_input = add_ctx.locator("div.layui-form-item:has(label:has-text('Event date')) input")
                     date_input.click()
                     cal_scope = add_ctx if add_ctx.locator("#layui-laydate1").count() else page
-                    select_date_layui(cal_scope, entry["year"], entry["month"], entry["day"])
+                    select_date_layui(cal_scope, dt_item.year, dt_item.month, dt_item.day)
 
-                    add_ctx.locator("div.layui-form-item:has(label:has-text('Activity theme')) input").fill(entry["theme"])
+                    add_ctx.locator("div.layui-form-item:has(label:has-text('Activity theme')) input").fill(theme)
                     add_ctx.locator("input[name='CDuration']").fill(c)
                     add_ctx.locator("input[name='ADuration']").fill(a)
                     add_ctx.locator("input[name='SDuration']").fill(s)
-                    add_ctx.locator("textarea[name='Reflection']").fill(entry["desc"])
+                    add_ctx.locator("textarea[name='Reflection']").fill(desc)
                     add_ctx.locator("button[lay-filter='add']:has-text('Save')").click()
-                    emit_log(sid, f"[Batch] ({idx}/{total}) Saved.")
+                    emit_log(sid, f"[Batch] ({idx}/{total}) Save clicked.")
 
                     try:
                         page.locator("iframe[src*='/Stu/Cas/AddRecord']").wait_for(state="detached")
@@ -700,42 +658,10 @@ def handle_run_reflection(data):
     if not desc_lines:
         desc_lines = [""] * len(titles)
 
-    cancel_flags[sid] = False
-
     def task():
-        entries = []
         try:
             from playwright.sync_api import sync_playwright
-            total = len(titles)
-
-            # Phase 1: Pre-generate all summaries + contents (parallel per entry)
-            emit_log(sid, f"[Reflection] Phase 1: Generating {total} reflections (parallel summary + content)...")
-            for idx, title in enumerate(titles, start=1):
-                if cancel_flags.get(sid):
-                    emit_log(sid, "[Reflection] Cancelled during generation.")
-                    socketio.emit("task_done", {"task": "reflection"}, to=sid)
-                    return
-
-                reflection_desc = desc_lines[idx - 1] if idx - 1 < len(desc_lines) else ""
-                emit_log(sid, f"[Reflection] ({idx}/{total}) Generating for '{title}'...")
-
-                with ThreadPoolExecutor(max_workers=2) as pool:
-                    fut_summary = pool.submit(
-                        generate_reflection_summary_deepseek,
-                        DEEPSEEK_API_KEY, club, title, club_desc, reflection_desc,
-                    )
-                    fut_content = pool.submit(
-                        generate_reflection_content_deepseek,
-                        DEEPSEEK_API_KEY, club, title, club_desc, reflection_desc,
-                    )
-                    summary = fut_summary.result()
-                    content = fut_content.result()
-
-                entries.append({"title": title, "summary": summary, "content": content})
-                socketio.emit("preview_reflection", {"summary": summary, "content": content}, to=sid)
-
-            # Phase 2: Fill all reflections in browser
-            emit_log(sid, f"[Reflection] Phase 2: Filling {total} reflections...")
+            emit_log(sid, f"[Reflection] Starting: {len(titles)} reflections.")
 
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
@@ -745,24 +671,36 @@ def handle_run_reflection(data):
                 login_and_wait_home(page, user, pw)
                 refl_list_ctx = open_reflection_list_ctx(page)
 
-                for idx, entry in enumerate(entries, start=1):
-                    if cancel_flags.get(sid):
-                        emit_log(sid, f"[Reflection] Cancelled at {idx}/{total}. Previous reflections already saved.")
-                        break
-
-                    emit_log(sid, f"[Reflection] ({idx}/{total}) Filling '{entry['title']}'...")
+                total = len(titles)
+                for idx, title in enumerate(titles, start=1):
+                    reflection_desc = desc_lines[idx - 1] if idx - 1 < len(desc_lines) else ""
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Opening add dialog...")
                     add_ctx = open_add_reflection_ctx(refl_list_ctx, page)
 
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Selecting club: {club}")
                     select_club_by_text(add_ctx, club)
-                    add_ctx.locator("input[name='Title']").fill(entry["title"])
-                    add_ctx.locator("textarea[name='Summary']").fill(entry["summary"])
-                    fill_kindeditor_body(add_ctx, entry["content"])
+                    add_ctx.locator("input[name='Title']").fill(title)
+
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Generating summary...")
+                    summary = generate_reflection_summary_deepseek(
+                        api_key=DEEPSEEK_API_KEY, club_name=club, title=title,
+                        club_desc=club_desc, reflection_desc=reflection_desc,
+                    )
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Generating reflection content...")
+                    reflection_text = generate_reflection_content_deepseek(
+                        api_key=DEEPSEEK_API_KEY, club_name=club, title=title,
+                        club_desc=club_desc, reflection_desc=reflection_desc,
+                    )
+                    socketio.emit("preview_reflection", {"summary": summary, "content": reflection_text}, to=sid)
+
+                    add_ctx.locator("textarea[name='Summary']").fill(summary)
+                    fill_kindeditor_body(add_ctx, reflection_text)
 
                     emit_log(sid, f"[Reflection] ({idx}/{total}) Selecting outcomes: {', '.join(selected)}")
                     click_learning_outcomes(add_ctx, selected)
 
                     add_ctx.locator("button[lay-filter='add']:has-text('Save')").click()
-                    emit_log(sid, f"[Reflection] ({idx}/{total}) Saved.")
+                    emit_log(sid, f"[Reflection] ({idx}/{total}) Save clicked.")
 
                     try:
                         page.locator("iframe[src*='/Stu/Cas/AddReflection']").wait_for(state="detached")
