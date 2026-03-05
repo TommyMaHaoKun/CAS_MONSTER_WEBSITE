@@ -128,7 +128,20 @@ def generate_activity_record_deepseek(api_key, club_name, date_ymd, theme, c_hou
 
 def generate_weekly_theme_desc_deepseek(api_key, club_name, date_ymd, club_desc, periodic_desc, used_themes, used_descs=None, model="deepseek-chat"):
     avoid = "; ".join(used_themes[-8:]) if used_themes else "none"
-    periodic_line = f"- Periodic activity: {periodic_desc}" if periodic_desc else "- Periodic activity: none"
+    if periodic_desc:
+        periodic_line = f"- Periodic activity: {periodic_desc}"
+        theme_guidance = (
+            f"- All themes MUST be about the periodic activity: {periodic_desc}.\n"
+            f"- Generate a specific aspect, session, or subtopic of this periodic activity.\n"
+            f"- Keep the same overarching subject; only vary the specific focus within that subject.\n"
+            f"- Avoid repetition. Do NOT reuse any themes from: {avoid}."
+        )
+    else:
+        periodic_line = "- Periodic activity: none"
+        theme_guidance = (
+            f"- Avoid repetition. Do NOT reuse any themes from: {avoid}.\n"
+            f"- Vary the activity focus across weeks."
+        )
     user_content = (
         f"Create ONE unique Activity theme and Activity Description for the club '{club_name}'.\n"
         f"Club description: {club_desc}\n"
@@ -139,8 +152,7 @@ def generate_weekly_theme_desc_deepseek(api_key, club_name, date_ymd, club_desc,
         f"- theme: 4-10 words, English, no date, no quotes.\n"
         f"- description: English, single paragraph, more than 80 words.\n"
         f"- Include at least 3 concrete details.\n"
-        f"- Avoid repetition. Do NOT reuse any themes from: {avoid}.\n"
-        f"- Vary the activity focus across weeks.\n"
+        f"{theme_guidance}\n"
         f"- No bullet points, no markdown, no labels."
     )
     messages = [
