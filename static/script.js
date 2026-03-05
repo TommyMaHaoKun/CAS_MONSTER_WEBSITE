@@ -1,4 +1,22 @@
 // CAS Autofill Web - Frontend Logic
+
+// ---- Dark mode ----
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const btn = document.getElementById("theme-toggle");
+    if (btn) btn.innerHTML = theme === "dark" ? "&#9788;" : "&#9790;";
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    const next = current === "dark" ? "light" : "dark";
+    localStorage.setItem("cas-theme", next);
+    applyTheme(next);
+}
+
+// Apply saved theme immediately
+applyTheme(localStorage.getItem("cas-theme") || "light");
+
 const socket = io();
 
 // ---- State ----
