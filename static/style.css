@@ -18,6 +18,35 @@
     --tab-bg: #E8EAED;
     --hover: #E8EAED;
     --divider: #C4C7C5;
+    --disclaimer-bg: #FFF8E1;
+    --disclaimer-border: #FFE082;
+    --disclaimer-text: #5D4037;
+    --shadow-calendar: rgba(0,0,0,0.12);
+}
+
+[data-theme="dark"] {
+    --bg: #1A1A2E;
+    --surface: #242438;
+    --border: #3D3D56;
+    --border-light: #2E2E45;
+    --text: #E8E8F0;
+    --text-secondary: #B0B0C0;
+    --muted: #8888A0;
+    --accent: #7B9FFF;
+    --accent-hover: #9BB5FF;
+    --accent-soft: #2A3A5C;
+    --accent-text: #9BB5FF;
+    --danger: #FF6B6B;
+    --danger-soft: #3D2020;
+    --success: #6BCB77;
+    --success-soft: #1E3D25;
+    --tab-bg: #2A2A40;
+    --hover: #32324A;
+    --divider: #3D3D56;
+    --disclaimer-bg: #2D2A1E;
+    --disclaimer-border: #4A4530;
+    --disclaimer-text: #D4C99E;
+    --shadow-calendar: rgba(0,0,0,0.35);
 }
 
 * {
@@ -215,7 +244,7 @@ body {
     color: var(--accent);
 }
 .btn-fetch:hover:not(:disabled) {
-    background: #A8C7FA;
+    filter: brightness(0.9);
 }
 .btn-accent {
     background: var(--accent);
@@ -373,11 +402,11 @@ body {
 
 /* Disclaimer */
 .disclaimer {
-    background: #FFF8E1;
-    border-bottom: 1px solid #FFE082;
+    background: var(--disclaimer-bg);
+    border-bottom: 1px solid var(--disclaimer-border);
     padding: 8px 20px;
     font-size: 11px;
-    color: #5D4037;
+    color: var(--disclaimer-text);
     line-height: 1.4;
 }
 
@@ -418,7 +447,7 @@ body {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    box-shadow: 0 4px 16px var(--shadow-calendar);
     padding: 8px;
     width: 300px;
     margin-top: 4px;
@@ -479,7 +508,7 @@ body {
     cursor: pointer;
 }
 .cal-day.cal-allowed:hover {
-    background: #A8C7FA;
+    filter: brightness(0.85);
 }
 .cal-day.cal-disabled {
     color: var(--muted);
@@ -507,4 +536,26 @@ body {
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
+}
+
+/* Theme toggle */
+.theme-toggle {
+    background: var(--tab-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    width: 36px;
+    height: 36px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--text);
+    transition: background 0.15s;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.theme-toggle:hover {
+    background: var(--hover);
 }
