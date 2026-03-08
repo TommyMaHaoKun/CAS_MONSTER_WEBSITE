@@ -560,7 +560,6 @@ body {
     line-height: 1;
     color: var(--text);
     transition: background 0.15s;
-    margin-left: auto;
     flex-shrink: 0;
 }
 .theme-toggle:hover {
@@ -592,4 +591,52 @@ body {
 }
 .btn-cancel:hover:not(:disabled) {
     filter: brightness(0.9);
+}
+
+/* Language toggle */
+.lang-toggle {
+    background: var(--tab-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    transition: background 0.15s;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+.lang-toggle:hover {
+    background: var(--hover);
+}
+
+/* Tutorial */
+.tutorial-card {
+    max-height: 500px;
+    overflow-y: auto;
+}
+.tutorial-section {
+    margin-bottom: 16px;
+}
+.tutorial-heading {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 6px;
+}
+.tutorial-content p {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 6px;
+}
+.tutorial-list {
+    margin: 6px 0 0 20px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.7;
+}
+.tutorial-list li {
+    margin-bottom: 4px;
 }
