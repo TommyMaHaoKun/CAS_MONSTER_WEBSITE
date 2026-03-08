@@ -12,71 +12,73 @@
         <div class="title-inner">
             <h1 class="app-title">CAS Autofill</h1>
             <span class="app-subtitle">Records + Reflection + Weekly Batch</span>
+            <button class="lang-toggle" id="lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
             <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" onclick="toggleTheme()">&#9790;</button>
         </div>
     </header>
     <div class="divider"></div>
 
-    <div class="disclaimer">
-        <strong>Disclaimer:</strong> This tool is intended solely for generating IB CAS activity records and reflections.
+    <div class="disclaimer" id="disclaimer">
+        <strong data-i18n="disclaimer_bold">Disclaimer:</strong> <span data-i18n="disclaimer_text">This tool is intended solely for generating IB CAS activity records and reflections.
         Users must not generate any content that violates the laws of the People's Republic of China, including but not limited to
         politically sensitive material, pornography, violence, terrorism, discrimination, or any other illegal content.
         By using this service, you agree to comply with all applicable laws and regulations. The operator reserves the right
-        to suspend access for any misuse.
+        to suspend access for any misuse.</span>
     </div>
 
     <main class="app-root">
         <div class="layout">
             <!-- Left Panel -->
             <div class="left-panel">
-                <h2 class="section-header">Configuration</h2>
+                <h2 class="section-header" data-i18n="config">Configuration</h2>
 
                 <!-- Account Card -->
                 <div class="card">
-                    <div class="card-title">Account</div>
+                    <div class="card-title" data-i18n="account">Account</div>
                     <div class="form-row">
-                        <label class="form-label">Username</label>
-                        <input type="text" id="username" class="form-input" placeholder="Login account">
+                        <label class="form-label" data-i18n="username">Username</label>
+                        <input type="text" id="username" class="form-input" data-i18n-ph="ph_username" placeholder="Login account">
                     </div>
                     <div class="form-row">
-                        <label class="form-label">Password</label>
-                        <input type="password" id="password" class="form-input" placeholder="Password">
+                        <label class="form-label" data-i18n="password">Password</label>
+                        <input type="password" id="password" class="form-input" data-i18n-ph="ph_password" placeholder="Password">
                     </div>
                     <div class="form-row">
                         <label class="form-label"></label>
-                        <button id="btn-fetch-clubs" class="btn btn-fetch" onclick="fetchClubs()">Fetch clubs</button>
+                        <button id="btn-fetch-clubs" class="btn btn-fetch" onclick="fetchClubs()" data-i18n="fetch_clubs">Fetch clubs</button>
                     </div>
                 </div>
 
                 <!-- Tabs -->
                 <div class="tabs">
                     <div class="tab-headers">
-                        <button class="tab-btn active" data-tab="tab-records">Activity Records</button>
-                        <button class="tab-btn" data-tab="tab-batch">Weekly Batch Records</button>
-                        <button class="tab-btn" data-tab="tab-reflection">Activity Reflection</button>
-                        <button class="tab-btn" data-tab="tab-log">Log</button>
+                        <button class="tab-btn active" data-tab="tab-records" data-i18n="tab_records">Activity Records</button>
+                        <button class="tab-btn" data-tab="tab-batch" data-i18n="tab_batch">Weekly Batch Records</button>
+                        <button class="tab-btn" data-tab="tab-reflection" data-i18n="tab_reflection">Activity Reflection</button>
+                        <button class="tab-btn" data-tab="tab-tutorial" data-i18n="tab_tutorial">Tutorial</button>
+                        <button class="tab-btn" data-tab="tab-log" data-i18n="tab_log">Log</button>
                     </div>
 
                     <!-- Activity Records Tab -->
                     <div class="tab-content active" id="tab-records">
                         <div class="card">
-                            <div class="card-title">Single Record</div>
+                            <div class="card-title" data-i18n="single_record">Single Record</div>
                             <div class="form-row">
-                                <label class="form-label">Club</label>
+                                <label class="form-label" data-i18n="club">Club</label>
                                 <select id="rec-club" class="form-select" disabled>
-                                    <option value="">Fetch clubs first</option>
+                                    <option value="" data-i18n="fetch_first">Fetch clubs first</option>
                                 </select>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Date</label>
+                                <label class="form-label" data-i18n="date">Date</label>
                                 <input type="date" id="rec-date" class="form-input">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Activity theme</label>
-                                <input type="text" id="rec-theme" class="form-input" placeholder="e.g. Cold War Origins Discussion">
+                                <label class="form-label" data-i18n="activity_theme">Activity theme</label>
+                                <input type="text" id="rec-theme" class="form-input" data-i18n-ph="ph_theme" placeholder="e.g. Cold War Origins Discussion">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Hours (C/A/S)</label>
+                                <label class="form-label" data-i18n="hours_cas">Hours (C/A/S)</label>
                                 <div class="hours-group">
                                     <span>C</span><input type="text" id="rec-c" class="form-input-sm" placeholder="0">
                                     <span>A</span><input type="text" id="rec-a" class="form-input-sm" placeholder="0">
@@ -84,27 +86,27 @@
                                 </div>
                             </div>
                         </div>
-                        <button id="btn-run-record" class="btn btn-accent" onclick="runRecord()">Run single record</button>
+                        <button id="btn-run-record" class="btn btn-accent" onclick="runRecord()" data-i18n="run_single">Run single record</button>
                     </div>
 
                     <!-- Weekly Batch Tab -->
                     <div class="tab-content" id="tab-batch">
                         <div class="card">
-                            <div class="card-title">Weekly Batch Records</div>
+                            <div class="card-title" data-i18n="weekly_batch">Weekly Batch Records</div>
                             <div class="form-row">
-                                <label class="form-label">Club</label>
+                                <label class="form-label" data-i18n="club">Club</label>
                                 <select id="batch-club" class="form-select" disabled>
-                                    <option value="">Fetch clubs first</option>
+                                    <option value="" data-i18n="fetch_first">Fetch clubs first</option>
                                 </select>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Club description</label>
-                                <input type="text" id="batch-club-desc" class="form-input" placeholder="Brief club description">
+                                <label class="form-label" data-i18n="club_desc">Club description</label>
+                                <input type="text" id="batch-club-desc" class="form-input" data-i18n-ph="ph_club_desc" placeholder="Brief club description">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Weekday</label>
+                                <label class="form-label" data-i18n="weekday">Weekday</label>
                                 <select id="batch-weekday" class="form-select">
-                                    <option value="">Select weekday</option>
+                                    <option value="" data-i18n="select_weekday">Select weekday</option>
                                     <option>Monday</option>
                                     <option>Tuesday</option>
                                     <option>Wednesday</option>
@@ -115,25 +117,25 @@
                                 </select>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Start date</label>
+                                <label class="form-label" data-i18n="start_date">Start date</label>
                                 <div class="date-picker-wrap">
-                                    <input type="text" id="batch-start" class="form-input" readonly placeholder="Select start date">
+                                    <input type="text" id="batch-start" class="form-input" readonly data-i18n-ph="ph_start_date" placeholder="Select start date">
                                     <div id="cal-batch-start" class="cal-dropdown"></div>
                                 </div>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">End date</label>
+                                <label class="form-label" data-i18n="end_date">End date</label>
                                 <div class="date-picker-wrap">
-                                    <input type="text" id="batch-end" class="form-input" readonly placeholder="Select end date">
+                                    <input type="text" id="batch-end" class="form-input" readonly data-i18n-ph="ph_end_date" placeholder="Select end date">
                                     <div id="cal-batch-end" class="cal-dropdown"></div>
                                 </div>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Periodic activity<br><small>(optional)</small></label>
-                                <input type="text" id="batch-periodic" class="form-input" placeholder="Optional recurring activity">
+                                <label class="form-label" data-i18n-html="periodic_label">Periodic activity<br><small>(optional)</small></label>
+                                <input type="text" id="batch-periodic" class="form-input" data-i18n-ph="ph_periodic" placeholder="Optional recurring activity">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Hours (C/A/S)</label>
+                                <label class="form-label" data-i18n="hours_cas">Hours (C/A/S)</label>
                                 <div class="hours-group">
                                     <span>C</span><input type="text" id="batch-c" class="form-input-sm" placeholder="0">
                                     <span>A</span><input type="text" id="batch-a" class="form-input-sm" placeholder="0">
@@ -141,60 +143,103 @@
                                 </div>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Theme/Description</label>
-                                <span class="text-muted">Generated automatically by DeepSeek</span>
+                                <label class="form-label" data-i18n="theme_desc">Theme/Description</label>
+                                <span class="text-muted" data-i18n="auto_deepseek">Generated automatically by DeepSeek</span>
                             </div>
                         </div>
-                        <button id="btn-run-batch" class="btn btn-accent" onclick="runBatch()">Run weekly batch</button>
+                        <button id="btn-run-batch" class="btn btn-accent" onclick="runBatch()" data-i18n="run_batch">Run weekly batch</button>
                     </div>
 
                     <!-- Reflection Tab -->
                     <div class="tab-content" id="tab-reflection">
                         <div class="card">
-                            <div class="card-title">Reflection</div>
+                            <div class="card-title" data-i18n="reflection">Reflection</div>
                             <div class="form-row">
-                                <label class="form-label">Club</label>
+                                <label class="form-label" data-i18n="club">Club</label>
                                 <select id="ref-club" class="form-select" disabled>
-                                    <option value="">Fetch clubs first</option>
+                                    <option value="" data-i18n="fetch_first">Fetch clubs first</option>
                                 </select>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Number of reflections</label>
+                                <label class="form-label" data-i18n="num_reflections">Number of reflections</label>
                                 <input type="number" id="ref-count" class="form-input" value="1" min="1">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Club description</label>
-                                <input type="text" id="ref-club-desc" class="form-input" placeholder="Brief club description">
+                                <label class="form-label" data-i18n="club_desc">Club description</label>
+                                <input type="text" id="ref-club-desc" class="form-input" data-i18n-ph="ph_club_desc" placeholder="Brief club description">
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Titles<br><small>(one per line)</small></label>
-                                <textarea id="ref-titles" class="form-textarea" rows="4" placeholder="One title per line"></textarea>
+                                <label class="form-label" data-i18n-html="titles_label">Titles<br><small>(one per line)</small></label>
+                                <textarea id="ref-titles" class="form-textarea" rows="4" data-i18n-ph="ph_titles" placeholder="One title per line"></textarea>
                             </div>
                             <div class="form-row">
-                                <label class="form-label">Reflection descriptions<br><small>(optional, one per line)</small></label>
-                                <textarea id="ref-descs" class="form-textarea" rows="4" placeholder="Optional: one description per line"></textarea>
+                                <label class="form-label" data-i18n-html="descs_label">Reflection descriptions<br><small>(optional, one per line)</small></label>
+                                <textarea id="ref-descs" class="form-textarea" rows="4" data-i18n-ph="ph_descs" placeholder="Optional: one description per line"></textarea>
                             </div>
                         </div>
 
                         <div class="card">
-                            <div class="card-title">Learning Outcomes</div>
+                            <div class="card-title" data-i18n="learning_outcomes">Learning Outcomes</div>
                             <div class="outcomes-grid">
-                                <label class="outcome-check"><input type="checkbox" value="Awareness"> Awareness</label>
-                                <label class="outcome-check"><input type="checkbox" value="Challenge"> Challenge</label>
-                                <label class="outcome-check"><input type="checkbox" value="Initiative"> Initiative</label>
-                                <label class="outcome-check"><input type="checkbox" value="Collaboration"> Collaboration</label>
-                                <label class="outcome-check"><input type="checkbox" value="Commitment"> Commitment</label>
-                                <label class="outcome-check"><input type="checkbox" value="Global Value"> Global Value</label>
-                                <label class="outcome-check"><input type="checkbox" value="Ethics"> Ethics</label>
-                                <label class="outcome-check"><input type="checkbox" value="New Skills"> New Skills</label>
+                                <label class="outcome-check"><input type="checkbox" value="Awareness"> <span data-i18n="lo_awareness">Awareness</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Challenge"> <span data-i18n="lo_challenge">Challenge</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Initiative"> <span data-i18n="lo_initiative">Initiative</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Collaboration"> <span data-i18n="lo_collaboration">Collaboration</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Commitment"> <span data-i18n="lo_commitment">Commitment</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Global Value"> <span data-i18n="lo_global">Global Value</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="Ethics"> <span data-i18n="lo_ethics">Ethics</span></label>
+                                <label class="outcome-check"><input type="checkbox" value="New Skills"> <span data-i18n="lo_newskills">New Skills</span></label>
                             </div>
                         </div>
-                        <button id="btn-run-reflection" class="btn btn-accent" onclick="runReflection()">Run reflection autofill</button>
+                        <button id="btn-run-reflection" class="btn btn-accent" onclick="runReflection()" data-i18n="run_reflection">Run reflection autofill</button>
+                    </div>
+
+                    <!-- Tutorial Tab -->
+                    <div class="tab-content" id="tab-tutorial">
+                        <div class="card tutorial-card">
+                            <div class="card-title" data-i18n="tutorial_title">How to Use CAS Autofill</div>
+                            <div class="tutorial-content" id="tutorial-content">
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_step1_title">Step 1: Login</h3>
+                                    <p data-i18n="tut_step1">Enter your WFLA school system username and password in the Account section, then click "Fetch clubs" to load your available clubs.</p>
+                                </div>
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_step2_title">Step 2: Choose a Mode</h3>
+                                    <p data-i18n="tut_step2">Select one of the three modes:</p>
+                                    <ul class="tutorial-list">
+                                        <li data-i18n="tut_mode1"><strong>Activity Records</strong> — Fill a single activity record for one date. You provide the club, date, activity theme, and CAS hours.</li>
+                                        <li data-i18n="tut_mode2"><strong>Weekly Batch Records</strong> — Automatically generate and fill multiple weekly records within a date range. The AI generates unique themes and descriptions for each week.</li>
+                                        <li data-i18n="tut_mode3"><strong>Activity Reflection</strong> — Generate and submit CAS reflections. Provide titles, optional descriptions, and select learning outcomes.</li>
+                                    </ul>
+                                </div>
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_step3_title">Step 3: Fill in the Form</h3>
+                                    <p data-i18n="tut_step3">Complete all required fields. For Weekly Batch, select a weekday first, then use the calendar to pick start/end dates (only the matching weekday is selectable). The "Periodic activity" field is optional — if provided, all generated records will share the same overarching theme.</p>
+                                </div>
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_step4_title">Step 4: Run</h3>
+                                    <p data-i18n="tut_step4">Click the Run button. The system will log in to the school system, generate content via DeepSeek AI, and fill in the forms automatically. Check the Log tab and Preview panel for progress and results.</p>
+                                </div>
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_hours_title">CAS Hours</h3>
+                                    <p data-i18n="tut_hours">C = Creativity, A = Activity, S = Service. Enter the number of hours for each category. Leave empty or enter 0 for categories that don't apply.</p>
+                                </div>
+                                <div class="tutorial-section">
+                                    <h3 class="tutorial-heading" data-i18n="tut_tips_title">Tips</h3>
+                                    <ul class="tutorial-list">
+                                        <li data-i18n="tut_tip1">The school system can be slow. Please be patient while the automation runs.</li>
+                                        <li data-i18n="tut_tip2">Check the Preview panel on the right to see generated content before it is submitted.</li>
+                                        <li data-i18n="tut_tip3">Use dark mode (toggle in top-right) for comfortable viewing at night.</li>
+                                        <li data-i18n="tut_tip4">For batch records, a more specific club description helps the AI generate better content.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Log Tab -->
                     <div class="tab-content" id="tab-log">
-                        <div class="card-title">Runtime Log</div>
+                        <div class="card-title" data-i18n="runtime_log">Runtime Log</div>
                         <div class="divider-light"></div>
                         <div id="log-output" class="log-box"></div>
                     </div>
@@ -203,13 +248,13 @@
 
             <!-- Right Panel: Preview -->
             <div class="right-panel">
-                <h3 class="panel-header">Preview</h3>
+                <h3 class="panel-header" data-i18n="preview">Preview</h3>
                 <div class="divider-light"></div>
 
                 <div class="preview-tabs">
                     <div class="preview-tab-headers">
-                        <button class="preview-tab-btn active" data-ptab="ptab-record">Record</button>
-                        <button class="preview-tab-btn" data-ptab="ptab-reflection">Reflection</button>
+                        <button class="preview-tab-btn active" data-ptab="ptab-record" data-i18n="preview_record">Record</button>
+                        <button class="preview-tab-btn" data-ptab="ptab-reflection" data-i18n="preview_reflection">Reflection</button>
                     </div>
 
                     <div class="preview-tab-content active" id="ptab-record">
@@ -217,9 +262,9 @@
                     </div>
 
                     <div class="preview-tab-content" id="ptab-reflection">
-                        <div class="preview-label">Content Summary (20 words)</div>
+                        <div class="preview-label" data-i18n="content_summary">Content Summary (20 words)</div>
                         <div id="preview-summary" class="preview-box preview-box-sm">No preview yet.</div>
-                        <div class="preview-label">Reflection content (&ge; 550 words)</div>
+                        <div class="preview-label" data-i18n="reflection_content">Reflection content (&ge; 550 words)</div>
                         <div id="preview-reflection" class="preview-box">No preview yet.</div>
                     </div>
                 </div>
