@@ -82,6 +82,11 @@ const I18N = {
         tut_tip2: "Check the Preview panel on the right to see generated content before it is submitted.",
         tut_tip3: "Use dark mode (toggle in top-right) for comfortable viewing at night.",
         tut_tip4: "For batch records, a more specific club description helps the AI generate better content.",
+        tab_chat: "CAS AI Chat",
+        chat_welcome: "Hello! I'm your IB CAS AI advisor. I've studied all the CAS documents. Ask me anything about CAS requirements, activities, or reflections!",
+        chat_placeholder: "Ask about IB CAS...",
+        chat_send: "Send",
+        chat_thinking: "Thinking...",
     },
     zh: {
         config: "\u914D\u7F6E",
@@ -163,6 +168,11 @@ const I18N = {
         tut_tip2: "\u67E5\u770B\u53F3\u4FA7\u9884\u89C8\u9762\u677F\u4EE5\u5728\u63D0\u4EA4\u524D\u67E5\u770B\u751F\u6210\u7684\u5185\u5BB9\u3002",
         tut_tip3: "\u4F7F\u7528\u6DF1\u8272\u6A21\u5F0F\uFF08\u53F3\u4E0A\u89D2\u5207\u6362\uFF09\u4EE5\u83B7\u5F97\u66F4\u8212\u9002\u7684\u591C\u95F4\u89C2\u770B\u4F53\u9A8C\u3002",
         tut_tip4: "\u5BF9\u4E8E\u6279\u91CF\u8BB0\u5F55\uFF0C\u66F4\u5177\u4F53\u7684\u793E\u56E2\u63CF\u8FF0\u6709\u52A9\u4E8E AI \u751F\u6210\u66F4\u597D\u7684\u5185\u5BB9\u3002",
+        tab_chat: "AI\u52A9\u624B",
+        chat_welcome: "\u4F60\u597D\uFF01\u6211\u662F\u4F60\u7684 IB CAS AI \u987E\u95EE\uFF0C\u5DF2\u5B66\u4E60\u4E86\u6240\u6709CAS\u6587\u6863\u3002\u6709\u4EFB\u4F55\u5173\u4E8E CAS \u8981\u6C42\u3001\u6D3B\u52A8\u6216\u53CD\u601D\u7684\u95EE\u9898\u90FD\u53EF\u4EE5\u95EE\u6211\uFF01",
+        chat_placeholder: "\u8BE2\u95EE\u6709\u5173 IB CAS \u7684\u95EE\u9898\u2026",
+        chat_send: "\u53D1\u9001",
+        chat_thinking: "\u601D\u8003\u4E2D\u2026",
     },
 };
 
@@ -581,5 +591,65 @@ function runReflection() {
         });
     } catch (e) {
         alert(e.message);
+    }
+}
+
+// ---- CAS AI Chat ----
+let chatHistory = [];
+
+function appendChatBubble(role, text, isThinking) {
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = "chat-bubble " + role;
+    if (isThinking) div.id = "chat-thinking-bubble";
+    const inner = document.createElement("div");
+    inner.className = "chat-bubble-inner";
+    inner.style.whiteSpace = "pre-wrap";
+    inner.textContent = text;
+    div.appendChild(inner);
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+}
+
+async function sendChat() {
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (!message) return;
+
+    input.value = "";
+    appendChatBubble("user", message);
+
+    const btn = document.getElementById("btn-send-chat");
+    btn.disabled = true;
+    input.disabled = true;
+
+    const t = I18N[currentLang];
+    const thinkingBubble = appendChatBubble("assistant thinking", t.chat_thinking || "Thinking...", true);
+
+    try {
+        const resp = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message, history: chatHistory }),
+        });
+        const data = await resp.json();
+        thinkingBubble.remove();
+        if (data.error) {
+            appendChatBubble("assistant", "Error: " + data.error);
+        } else {
+            appendChatBubble("assistant", data.reply);
+            chatHistory.push({ role: "user", content: message });
+            chatHistory.push({ role: "assistant", content: data.reply });
+            // Keep history manageable
+            if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+        }
+    } catch (e) {
+        thinkingBubble.remove();
+        appendChatBubble("assistant", "Network error: " + e.message);
+    } finally {
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
     }
 }

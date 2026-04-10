@@ -56,6 +56,7 @@
                         <button class="tab-btn" data-tab="tab-batch" data-i18n="tab_batch">Weekly Batch Records</button>
                         <button class="tab-btn" data-tab="tab-reflection" data-i18n="tab_reflection">Activity Reflection</button>
                         <button class="tab-btn" data-tab="tab-tutorial" data-i18n="tab_tutorial">Tutorial</button>
+                        <button class="tab-btn" data-tab="tab-chat" data-i18n="tab_chat">CAS AI Chat</button>
                         <button class="tab-btn" data-tab="tab-log" data-i18n="tab_log">Log</button>
                     </div>
 
@@ -233,6 +234,21 @@
                                         <li data-i18n="tut_tip4">For batch records, a more specific club description helps the AI generate better content.</li>
                                     </ul>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CAS AI Chat Tab -->
+                    <div class="tab-content" id="tab-chat">
+                        <div class="chat-wrap">
+                            <div class="chat-messages" id="chat-messages">
+                                <div class="chat-bubble assistant">
+                                    <div class="chat-bubble-inner" data-i18n="chat_welcome">Hello! I'm your IB CAS AI advisor. I've studied all the CAS documents. Ask me anything about CAS requirements, activities, or reflections!</div>
+                                </div>
+                            </div>
+                            <div class="chat-input-row">
+                                <input type="text" id="chat-input" class="form-input chat-input" data-i18n-ph="chat_placeholder" placeholder="Ask about IB CAS..." onkeydown="if(event.key==='Enter')sendChat()">
+                                <button class="btn btn-accent" id="btn-send-chat" onclick="sendChat()" data-i18n="chat_send">Send</button>
                             </div>
                         </div>
                     </div>

@@ -14,6 +14,41 @@ import requests
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 
+# --------------- CAS Knowledge Base ---------------
+
+def load_cas_knowledge():
+    """Read all .docx and .xlsx files from CAS_DOCUMENTS/ and return combined text."""
+    docs_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "CAS_DOCUMENTS")
+    if not os.path.exists(docs_dir):
+        return ""
+    texts = []
+    for fname in sorted(os.listdir(docs_dir)):
+        fpath = os.path.join(docs_dir, fname)
+        try:
+            if fname.endswith(".docx"):
+                from docx import Document as DocxDocument
+                doc = DocxDocument(fpath)
+                text = "\n".join(p.text.strip() for p in doc.paragraphs if p.text.strip())
+                if text:
+                    texts.append(f"【文档：{fname}】\n{text[:3000]}")
+            elif fname.endswith(".xlsx"):
+                import openpyxl
+                wb = openpyxl.load_workbook(fpath, read_only=True, data_only=True)
+                for ws in wb.worksheets:
+                    rows = []
+                    for row in ws.iter_rows(values_only=True):
+                        row_text = " | ".join(str(c) for c in row if c is not None)
+                        if row_text.strip():
+                            rows.append(row_text)
+                    if rows:
+                        texts.append(f"【表格：{fname} - {ws.title}】\n" + "\n".join(rows[:60]))
+        except Exception as e:
+            print(f"[CAS] Warning: Could not read {fname}: {e}")
+    return "\n\n".join(texts)
+
+CAS_KNOWLEDGE_BASE = load_cas_knowledge()
+print(f"[CAS] Knowledge base loaded: {len(CAS_KNOWLEDGE_BASE)} chars from CAS_DOCUMENTS/")
+
 # --------------- Config ---------------
 URL = "http://101.227.232.33:8001/"
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
@@ -723,6 +758,39 @@ def handle_run_reflection(data):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat_cas():
+    data = request.json or {}
+    user_message = data.get("message", "").strip()
+    history = data.get("history", [])
+
+    if not user_message:
+        return jsonify({"error": "Empty message"}), 400
+    if not DEEPSEEK_API_KEY:
+        return jsonify({"error": "DeepSeek API key not configured on server."}), 500
+
+    system_content = (
+        "You are an IB CAS (Creativity, Activity, Service) expert advisor for WFLA high school students. "
+        "Answer questions about IB CAS requirements, activities, reflections, learning outcomes, and best practices. "
+        "Be concise, helpful, and supportive. Respond in the same language the user uses (Chinese or English).\n\n"
+    )
+    if CAS_KNOWLEDGE_BASE:
+        system_content += "以下是学校官方提供的IB CAS文档内容，请以此为依据回答问题：\n\n" + CAS_KNOWLEDGE_BASE
+
+    messages = [{"role": "system", "content": system_content}]
+    for h in history[-8:]:
+        if h.get("role") in ("user", "assistant") and h.get("content"):
+            messages.append({"role": h["role"], "content": h["content"]})
+    messages.append({"role": "user", "content": user_message})
+
+    try:
+        resp = deepseek_chat(DEEPSEEK_API_KEY, "deepseek-chat", messages, temperature=0.7, max_tokens=800)
+        reply = resp["choices"][0]["message"]["content"].strip()
+        return jsonify({"reply": reply})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
