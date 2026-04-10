@@ -2,3 +2,5 @@ flask
 flask-socketio
 requests
 playwright
+python-docx
+openpyxl

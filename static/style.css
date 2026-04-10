@@ -640,3 +640,60 @@ body {
 .tutorial-list li {
     margin-bottom: 4px;
 }
+
+/* ---- CAS AI Chat ---- */
+.chat-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 480px;
+    gap: 8px;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 4px 2px;
+}
+.chat-bubble {
+    display: flex;
+    max-width: 88%;
+}
+.chat-bubble.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+}
+.chat-bubble.assistant {
+    align-self: flex-start;
+}
+.chat-bubble-inner {
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+}
+.chat-bubble.user .chat-bubble-inner {
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+.chat-bubble.assistant .chat-bubble-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+}
+.chat-bubble.thinking .chat-bubble-inner {
+    color: var(--muted);
+    font-style: italic;
+}
+.chat-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.chat-input-row .chat-input {
+    flex: 1;
+}
