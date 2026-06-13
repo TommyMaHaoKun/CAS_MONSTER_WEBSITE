@@ -608,7 +608,7 @@ function renderMarkdown(src) {
     const codeBlocks = [];
     src = src.replace(/```[\w]*\n?([\s\S]*?)```/g, (m, code) => {
         codeBlocks.push(code.replace(/\n$/, ""));
-        return " CB" + (codeBlocks.length - 1) + " ";
+        return "CB" + (codeBlocks.length - 1) + "";
     });
 
     const lines = src.split("\n");
@@ -628,7 +628,7 @@ function renderMarkdown(src) {
 
     for (const raw of lines) {
         const line = raw.replace(/\s+$/, "");
-        const cb = line.match(/^ CB(\d+) $/);
+        const cb = line.match(/^CB(\d+)$/);
         if (cb) { closeList(); html += `<pre><code>${escapeHtml(codeBlocks[+cb[1]])}</code></pre>`; continue; }
         if (line.trim() === "") { closeList(); continue; }
 
