@@ -15,4 +15,6 @@ RUN playwright install chromium
 
 COPY . .
 
+ENV HOST=0.0.0.0
+
 CMD ["python", "app.py"]

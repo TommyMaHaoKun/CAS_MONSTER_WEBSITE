@@ -6,7 +6,9 @@ import os
 import re
 import time
 import json
+import secrets
 import threading
+from collections import defaultdict
 from datetime import date as dt_date, timedelta
 from typing import Optional
 
@@ -56,9 +58,76 @@ DEEPSEEK_CHAT_ENDPOINT = f"{DEEPSEEK_BASE_URL}/v1/chat/completions"
 CONVERSATION_CLUB = "谈话记录(Conversation)"
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 
+# --------------- Security Config ---------------
+# Max concurrent Playwright tasks to prevent resource exhaustion
+MAX_CONCURRENT_TASKS = int(os.environ.get("MAX_CONCURRENT_TASKS", "3"))
+_task_semaphore = threading.Semaphore(MAX_CONCURRENT_TASKS)
+
+# Rate limiting for /api/chat (per-IP)
+_RATE_LIMIT_WINDOW = 60  # seconds
+_RATE_LIMIT_MAX = 15     # max requests per window
+_rate_limit_store: dict[str, list[float]] = defaultdict(list)
+_rate_limit_lock = threading.Lock()
+
+PLAYWRIGHT_TIMEOUT_MS = int(os.environ.get("PLAYWRIGHT_TIMEOUT_MS", "120000"))  # 120s default
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "cas-monster-secret"
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
+
+# CORS: restrict to specific origins (comma-separated env var) or same-origin (None)
+_cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "").strip()
+_cors_list = [o.strip() for o in _cors_origins.split(",") if o.strip()] if _cors_origins else None
+socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode="threading")
+
+# --------------- Security Helpers ---------------
+
+def safe_str(value, max_length: int = 1000, default: str = "") -> str:
+    """Ensure a value is a string with bounded length. Prevents type confusion attacks."""
+    if not isinstance(value, str):
+        return default
+    return value.strip()[:max_length]
+
+
+def sanitize_error(error: Exception) -> str:
+    """Remove sensitive data (API keys, passwords) from error messages before sending to client."""
+    msg = str(error)
+    # Mask anything that looks like an API key or Bearer token
+    msg = re.sub(r'Bearer\s+[A-Za-z0-9_\-\.]+', 'Bearer [REDACTED]', msg)
+    msg = re.sub(r'sk-[A-Za-z0-9]{10,}', '[REDACTED_KEY]', msg)
+    # Mask the DeepSeek API key if it appears
+    if DEEPSEEK_API_KEY and len(DEEPSEEK_API_KEY) > 4:
+        msg = msg.replace(DEEPSEEK_API_KEY, '[REDACTED_KEY]')
+    return msg
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Returns True if request is within rate limit, False if exceeded."""
+    now = time.time()
+    with _rate_limit_lock:
+        timestamps = _rate_limit_store[ip]
+        # Remove expired entries
+        _rate_limit_store[ip] = [t for t in timestamps if now - t < _RATE_LIMIT_WINDOW]
+        if len(_rate_limit_store[ip]) >= _RATE_LIMIT_MAX:
+            return False
+        _rate_limit_store[ip].append(now)
+        return True
+
+
+# --------------- Security Headers ---------------
+
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to every response."""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    # Only add HSTS if behind HTTPS (check via env var)
+    if os.environ.get('ENABLE_HSTS', '').lower() == 'true':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
 
 # --------------- Helpers ---------------
 
@@ -114,13 +183,15 @@ def deepseek_chat(api_key: str, model: str, messages: list, temperature: float =
         "temperature": temperature,
         "max_tokens": max_tokens,
     }
-    r = requests.post(DEEPSEEK_CHAT_ENDPOINT, headers=headers, json=payload)
+    r = requests.post(DEEPSEEK_CHAT_ENDPOINT, headers=headers, json=payload, timeout=60)
     if r.status_code != 200:
         try:
             j = r.json()
         except Exception:
-            j = {"raw": r.text}
-        raise RuntimeError(f"DeepSeek API error HTTP {r.status_code}: {j}")
+            j = {"raw": r.text[:200]}  # Truncate to avoid leaking sensitive data
+        # Sanitize: don't expose API key in error messages
+        error_msg = f"DeepSeek API error HTTP {r.status_code}"
+        raise RuntimeError(error_msg)
     return r.json()
 
 
@@ -465,21 +536,26 @@ def emit_log(sid, msg):
 @socketio.on("fetch_clubs")
 def handle_fetch_clubs(data):
     sid = request.sid
-    user = data.get("username", "").strip()
-    pw = data.get("password", "").strip()
+    user = safe_str(data.get("username", ""), max_length=100)
+    pw = safe_str(data.get("password", ""), max_length=200)
     if not user or not pw:
         emit("error", {"msg": "Username/Password cannot be empty."})
         return
 
     def task():
+        acquired = _task_semaphore.acquire(timeout=5)
+        if not acquired:
+            emit_log(sid, "[Clubs] Server busy, too many concurrent tasks. Please try again later.")
+            socketio.emit("error", {"msg": "Server busy. Please try again later."}, to=sid)
+            return
         try:
             from playwright.sync_api import sync_playwright
             emit_log(sid, "[Clubs] Logging in and fetching clubs...")
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
-                page.set_default_timeout(0)
-                page.set_default_navigation_timeout(0)
+                page.set_default_timeout(PLAYWRIGHT_TIMEOUT_MS)
+                page.set_default_navigation_timeout(PLAYWRIGHT_TIMEOUT_MS)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
@@ -496,8 +572,10 @@ def handle_fetch_clubs(data):
                 "clubs_reflection": clubs_reflection,
             }, to=sid)
         except Exception as e:
-            emit_log(sid, f"[Clubs] Error: {e}")
-            socketio.emit("error", {"msg": str(e)}, to=sid)
+            emit_log(sid, f"[Clubs] Error: {sanitize_error(e)}")
+            socketio.emit("error", {"msg": sanitize_error(e)}, to=sid)
+        finally:
+            _task_semaphore.release()
 
     threading.Thread(target=task, daemon=True).start()
 
@@ -505,14 +583,14 @@ def handle_fetch_clubs(data):
 @socketio.on("run_record")
 def handle_run_record(data):
     sid = request.sid
-    user = data.get("username", "").strip()
-    pw = data.get("password", "").strip()
-    club = data.get("club", "").strip()
-    date_str = data.get("date", "").strip()
-    theme = data.get("theme", "").strip()
-    c = data.get("c_hours", "").strip()
-    a = data.get("a_hours", "").strip()
-    s = data.get("s_hours", "").strip()
+    user = safe_str(data.get("username", ""), max_length=100)
+    pw = safe_str(data.get("password", ""), max_length=200)
+    club = safe_str(data.get("club", ""), max_length=200)
+    date_str = safe_str(data.get("date", ""), max_length=20)
+    theme = safe_str(data.get("theme", ""), max_length=500)
+    c = safe_str(data.get("c_hours", ""), max_length=10)
+    a = safe_str(data.get("a_hours", ""), max_length=10)
+    s = safe_str(data.get("s_hours", ""), max_length=10)
 
     try:
         y, mo, d = parse_date_ymd(date_str)
@@ -525,6 +603,11 @@ def handle_run_record(data):
         return
 
     def task():
+        acquired = _task_semaphore.acquire(timeout=5)
+        if not acquired:
+            emit_log(sid, "[Records] Server busy. Please try again later.")
+            socketio.emit("task_done", {"task": "record"}, to=sid)
+            return
         try:
             from playwright.sync_api import sync_playwright, TimeoutError as PWTimeoutError
             emit_log(sid, "[Records] Generating description via DeepSeek...")
@@ -538,8 +621,8 @@ def handle_run_record(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
-                page.set_default_timeout(0)
-                page.set_default_navigation_timeout(0)
+                page.set_default_timeout(PLAYWRIGHT_TIMEOUT_MS)
+                page.set_default_navigation_timeout(PLAYWRIGHT_TIMEOUT_MS)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
                 add_ctx = open_add_record_ctx(record_list_ctx, page)
@@ -566,8 +649,10 @@ def handle_run_record(data):
             emit_log(sid, "[Records] Run finished.")
             socketio.emit("task_done", {"task": "record"}, to=sid)
         except Exception as e:
-            emit_log(sid, f"[Records] Error: {e}")
+            emit_log(sid, f"[Records] Error: {sanitize_error(e)}")
             socketio.emit("task_done", {"task": "record"}, to=sid)
+        finally:
+            _task_semaphore.release()
 
     threading.Thread(target=task, daemon=True).start()
 
@@ -575,17 +660,17 @@ def handle_run_record(data):
 @socketio.on("run_batch")
 def handle_run_batch(data):
     sid = request.sid
-    user = data.get("username", "").strip()
-    pw = data.get("password", "").strip()
-    club = data.get("club", "").strip()
-    club_desc = data.get("club_desc", "").strip()
-    weekday_label = data.get("weekday", "").strip()
-    start = data.get("start_date", "").strip()
-    end = data.get("end_date", "").strip()
-    periodic = data.get("periodic", "").strip()
-    c = data.get("c_hours", "").strip()
-    a = data.get("a_hours", "").strip()
-    s = data.get("s_hours", "").strip()
+    user = safe_str(data.get("username", ""), max_length=100)
+    pw = safe_str(data.get("password", ""), max_length=200)
+    club = safe_str(data.get("club", ""), max_length=200)
+    club_desc = safe_str(data.get("club_desc", ""), max_length=1000)
+    weekday_label = safe_str(data.get("weekday", ""), max_length=20)
+    start = safe_str(data.get("start_date", ""), max_length=20)
+    end = safe_str(data.get("end_date", ""), max_length=20)
+    periodic = safe_str(data.get("periodic", ""), max_length=500)
+    c = safe_str(data.get("c_hours", ""), max_length=10)
+    a = safe_str(data.get("a_hours", ""), max_length=10)
+    s = safe_str(data.get("s_hours", ""), max_length=10)
 
     WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -597,6 +682,8 @@ def handle_run_batch(data):
         y2, m2, d2 = parse_date_ymd(end)
         start_dt = dt_date(y1, m1, d1)
         end_dt = dt_date(y2, m2, d2)
+        if weekday_label not in WEEKDAYS:
+            raise ValueError("Invalid weekday.")
         weekday_idx = WEEKDAYS.index(weekday_label)
         if start_dt.weekday() != weekday_idx or end_dt.weekday() != weekday_idx:
             raise ValueError(f"Start and end dates must both be {weekday_label}.")
@@ -605,6 +692,9 @@ def handle_run_batch(data):
         dates = list(iter_weekly_dates(start_dt, end_dt))
         if not dates:
             raise ValueError("No dates found.")
+        # Limit batch size to prevent abuse
+        if len(dates) > 52:
+            raise ValueError("Batch too large. Maximum 52 weeks per batch.")
     except Exception as e:
         emit("error", {"msg": str(e)})
         return
@@ -612,6 +702,11 @@ def handle_run_batch(data):
     def task():
         used_themes = []
         used_descs = []
+        acquired = _task_semaphore.acquire(timeout=5)
+        if not acquired:
+            emit_log(sid, "[Batch] Server busy. Please try again later.")
+            socketio.emit("task_done", {"task": "batch"}, to=sid)
+            return
         try:
             from playwright.sync_api import sync_playwright
             emit_log(sid, f"[Batch] Starting: {len(dates)} weekly records.")
@@ -619,8 +714,8 @@ def handle_run_batch(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
-                page.set_default_timeout(0)
-                page.set_default_navigation_timeout(0)
+                page.set_default_timeout(PLAYWRIGHT_TIMEOUT_MS)
+                page.set_default_navigation_timeout(PLAYWRIGHT_TIMEOUT_MS)
                 login_and_wait_home(page, user, pw)
                 record_list_ctx = open_records_list_ctx(page)
 
@@ -667,8 +762,10 @@ def handle_run_batch(data):
             emit_log(sid, "[Batch] Run finished.")
             socketio.emit("task_done", {"task": "batch"}, to=sid)
         except Exception as e:
-            emit_log(sid, f"[Batch] Error: {e}")
+            emit_log(sid, f"[Batch] Error: {sanitize_error(e)}")
             socketio.emit("task_done", {"task": "batch"}, to=sid)
+        finally:
+            _task_semaphore.release()
 
     threading.Thread(target=task, daemon=True).start()
 
@@ -676,16 +773,29 @@ def handle_run_batch(data):
 @socketio.on("run_reflection")
 def handle_run_reflection(data):
     sid = request.sid
-    user = data.get("username", "").strip()
-    pw = data.get("password", "").strip()
-    club = data.get("club", "").strip()
-    club_desc = data.get("club_desc", "").strip()
-    titles = data.get("titles", [])
-    desc_lines = data.get("desc_lines", [])
-    selected = data.get("outcomes", [])
+    user = safe_str(data.get("username", ""), max_length=100)
+    pw = safe_str(data.get("password", ""), max_length=200)
+    club = safe_str(data.get("club", ""), max_length=200)
+    club_desc = safe_str(data.get("club_desc", ""), max_length=1000)
+    raw_titles = data.get("titles", [])
+    raw_desc_lines = data.get("desc_lines", [])
+    raw_selected = data.get("outcomes", [])
+
+    # Validate and sanitize list inputs
+    VALID_OUTCOMES = {"Awareness", "Challenge", "Initiative", "Collaboration",
+                      "Commitment", "Global Value", "Ethics", "New Skills"}
+    if not isinstance(raw_titles, list):
+        emit("error", {"msg": "Invalid titles format."})
+        return
+    titles = [safe_str(t, max_length=500) for t in raw_titles if isinstance(t, str) and t.strip()]
+    desc_lines = [safe_str(d, max_length=1000) for d in raw_desc_lines] if isinstance(raw_desc_lines, list) else []
+    selected = [s for s in raw_selected if isinstance(s, str) and s in VALID_OUTCOMES]
 
     if not titles:
         emit("error", {"msg": "Please provide at least one title."})
+        return
+    if len(titles) > 20:
+        emit("error", {"msg": "Maximum 20 reflections per batch."})
         return
     if not selected:
         emit("error", {"msg": "Select at least one Learning Outcome."})
@@ -694,6 +804,11 @@ def handle_run_reflection(data):
         desc_lines = [""] * len(titles)
 
     def task():
+        acquired = _task_semaphore.acquire(timeout=5)
+        if not acquired:
+            emit_log(sid, "[Reflection] Server busy. Please try again later.")
+            socketio.emit("task_done", {"task": "reflection"}, to=sid)
+            return
         try:
             from playwright.sync_api import sync_playwright
             emit_log(sid, f"[Reflection] Starting: {len(titles)} reflections.")
@@ -701,8 +816,8 @@ def handle_run_reflection(data):
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True, slow_mo=60)
                 page = browser.new_page()
-                page.set_default_timeout(0)
-                page.set_default_navigation_timeout(0)
+                page.set_default_timeout(PLAYWRIGHT_TIMEOUT_MS)
+                page.set_default_navigation_timeout(PLAYWRIGHT_TIMEOUT_MS)
                 login_and_wait_home(page, user, pw)
                 refl_list_ctx = open_reflection_list_ctx(page)
 
@@ -747,8 +862,10 @@ def handle_run_reflection(data):
             emit_log(sid, "[Reflection] Run finished.")
             socketio.emit("task_done", {"task": "reflection"}, to=sid)
         except Exception as e:
-            emit_log(sid, f"[Reflection] Error: {e}")
+            emit_log(sid, f"[Reflection] Error: {sanitize_error(e)}")
             socketio.emit("task_done", {"task": "reflection"}, to=sid)
+        finally:
+            _task_semaphore.release()
 
     threading.Thread(target=task, daemon=True).start()
 
@@ -762,14 +879,23 @@ def index():
 
 @app.route("/api/chat", methods=["POST"])
 def chat_cas():
+    # Rate limiting
+    client_ip = request.remote_addr or "unknown"
+    if not _check_rate_limit(client_ip):
+        return jsonify({"error": "Rate limit exceeded. Please wait before sending more messages."}), 429
+
     data = request.json or {}
-    user_message = data.get("message", "").strip()
+    user_message = safe_str(data.get("message", ""), max_length=2000)
     history = data.get("history", [])
 
     if not user_message:
         return jsonify({"error": "Empty message"}), 400
     if not DEEPSEEK_API_KEY:
         return jsonify({"error": "DeepSeek API key not configured on server."}), 500
+
+    # Validate history is a list of dicts
+    if not isinstance(history, list):
+        history = []
 
     system_content = (
         "You are an IB CAS (Creativity, Activity, Service) expert advisor for WFLA high school students. "
@@ -781,8 +907,8 @@ def chat_cas():
 
     messages = [{"role": "system", "content": system_content}]
     for h in history[-8:]:
-        if h.get("role") in ("user", "assistant") and h.get("content"):
-            messages.append({"role": h["role"], "content": h["content"]})
+        if isinstance(h, dict) and h.get("role") in ("user", "assistant") and isinstance(h.get("content"), str):
+            messages.append({"role": h["role"], "content": h["content"][:2000]})  # Truncate history entries
     messages.append({"role": "user", "content": user_message})
 
     try:
@@ -790,9 +916,12 @@ def chat_cas():
         reply = resp["choices"][0]["message"]["content"].strip()
         return jsonify({"reply": reply})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": sanitize_error(e)}), 500
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port, debug=False, allow_unsafe_werkzeug=True)
+    # Default to 127.0.0.1 for local development; set HOST=0.0.0.0 for Docker/production
+    host = os.environ.get("HOST", "127.0.0.1")
+    # NOTE: For production, use a proper WSGI server (gunicorn + eventlet) instead of Werkzeug
+    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True)
