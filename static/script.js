@@ -597,6 +597,61 @@ function runReflection() {
 // ---- CAS AI Chat ----
 let chatHistory = [];
 
+function escapeHtml(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Minimal, self-contained Markdown renderer. Escapes HTML first to prevent XSS,
+// then applies a safe subset of Markdown (headings, bold/italic, code, lists, links).
+function renderMarkdown(src) {
+    // Extract fenced code blocks first so their contents aren't processed.
+    const codeBlocks = [];
+    src = src.replace(/```[\w]*\n?([\s\S]*?)```/g, (m, code) => {
+        codeBlocks.push(code.replace(/\n$/, ""));
+        return " CB" + (codeBlocks.length - 1) + " ";
+    });
+
+    const lines = src.split("\n");
+    let html = "";
+    let listType = null; // "ul" | "ol"
+    const closeList = () => { if (listType) { html += `</${listType}>`; listType = null; } };
+
+    const inline = (text) => {
+        text = escapeHtml(text);
+        text = text.replace(/`([^`]+)`/g, (m, c) => `<code>${c}</code>`);
+        text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        text = text.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
+        text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+            '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        return text;
+    };
+
+    for (const raw of lines) {
+        const line = raw.replace(/\s+$/, "");
+        const cb = line.match(/^ CB(\d+) $/);
+        if (cb) { closeList(); html += `<pre><code>${escapeHtml(codeBlocks[+cb[1]])}</code></pre>`; continue; }
+        if (line.trim() === "") { closeList(); continue; }
+
+        const h = line.match(/^(#{1,4})\s+(.*)$/);
+        if (h) { closeList(); const lv = h[1].length; html += `<h${lv}>${inline(h[2])}</h${lv}>`; continue; }
+
+        const ol = line.match(/^\s*\d+\.\s+(.*)$/);
+        const ul = line.match(/^\s*[-*]\s+(.*)$/);
+        if (ol) {
+            if (listType !== "ol") { closeList(); html += "<ol>"; listType = "ol"; }
+            html += `<li>${inline(ol[1])}</li>`; continue;
+        }
+        if (ul) {
+            if (listType !== "ul") { closeList(); html += "<ul>"; listType = "ul"; }
+            html += `<li>${inline(ul[1])}</li>`; continue;
+        }
+        closeList();
+        html += `<p>${inline(line)}</p>`;
+    }
+    closeList();
+    return html;
+}
+
 function appendChatBubble(role, text, isThinking) {
     const container = document.getElementById("chat-messages");
     const div = document.createElement("div");
@@ -604,8 +659,14 @@ function appendChatBubble(role, text, isThinking) {
     if (isThinking) div.id = "chat-thinking-bubble";
     const inner = document.createElement("div");
     inner.className = "chat-bubble-inner";
-    inner.style.whiteSpace = "pre-wrap";
-    inner.textContent = text;
+    // Render assistant replies as Markdown; keep user input / status as plain text.
+    if (role.indexOf("assistant") === 0 && !isThinking) {
+        inner.classList.add("markdown");
+        inner.innerHTML = renderMarkdown(text);
+    } else {
+        inner.style.whiteSpace = "pre-wrap";
+        inner.textContent = text;
+    }
     div.appendChild(inner);
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
