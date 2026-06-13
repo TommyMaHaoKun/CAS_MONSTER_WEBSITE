@@ -74,9 +74,12 @@ PLAYWRIGHT_TIMEOUT_MS = int(os.environ.get("PLAYWRIGHT_TIMEOUT_MS", "120000"))  
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
 
-# CORS: restrict to specific origins (comma-separated env var) or same-origin (None)
+# CORS: restrict to specific origins (comma-separated env var), or allow all ("*")
+# when unset. "*" is the historical default and is required for the Socket.IO
+# handshake to succeed when the app runs behind a proxy/cloud host (where the
+# browser Origin doesn't match the server's idea of "same-origin").
 _cors_origins = os.environ.get("CORS_ALLOWED_ORIGINS", "").strip()
-_cors_list = [o.strip() for o in _cors_origins.split(",") if o.strip()] if _cors_origins else None
+_cors_list = [o.strip() for o in _cors_origins.split(",") if o.strip()] if _cors_origins else "*"
 socketio = SocketIO(app, cors_allowed_origins=_cors_list, async_mode="threading")
 
 # --------------- Security Helpers ---------------
