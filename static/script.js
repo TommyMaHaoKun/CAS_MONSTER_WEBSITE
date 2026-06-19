@@ -28,7 +28,7 @@ const I18N = {
         end_date: "End date",
         periodic_label: "Periodic activity<br><small>(optional)</small>",
         theme_desc: "Theme/Description",
-        auto_deepseek: "Generated automatically by DeepSeek",
+        auto_deepseek: "Generated automatically by Qwen",
         run_batch: "Run weekly batch",
         reflection: "Reflection",
         num_reflections: "Number of reflections",
@@ -74,7 +74,7 @@ const I18N = {
         tut_step3_title: "Step 3: Fill in the Form",
         tut_step3: 'Complete all required fields. For Weekly Batch, select a weekday first, then use the calendar to pick start/end dates (only the matching weekday is selectable). The "Periodic activity" field is optional \u2014 if provided, all generated records will share the same overarching theme.',
         tut_step4_title: "Step 4: Run",
-        tut_step4: "Click the Run button. The system will log in to the school system, generate content via DeepSeek AI, and fill in the forms automatically. Check the Log tab and Preview panel for progress and results.",
+        tut_step4: "Click the Run button. The system will log in to the school system, generate content via Qwen AI, and fill in the forms automatically. Check the Log tab and Preview panel for progress and results.",
         tut_hours_title: "CAS Hours",
         tut_hours: "C = Creativity, A = Activity, S = Service. Enter the number of hours for each category. Leave empty or enter 0 for categories that don't apply.",
         tut_tips_title: "Tips",
@@ -84,9 +84,78 @@ const I18N = {
         tut_tip4: "For batch records, a more specific club description helps the AI generate better content.",
         tab_chat: "CAS AI Chat",
         chat_welcome: "Hello! I'm your IB CAS AI advisor. I've studied all the CAS documents. Ask me anything about CAS requirements, activities, or reflections!",
-        chat_placeholder: "Ask about IB CAS...",
+        chat_placeholder: "Ask about IB CAS, or ask me to fill a form...",
         chat_send: "Send",
         chat_thinking: "Thinking...",
+        thinking_toggle: "Thinking",
+        thinking_label: "Thinking",
+        // Login
+        login_sub: "Sign in with your WFLA school account to begin.",
+        remember_me: "Remember me on this device",
+        login_btn: "Sign in",
+        logout_btn: "Log out",
+        refresh_clubs: "Refresh clubs",
+        login_empty: "Please enter your username and password.",
+        login_verifying: "Signing in…",
+        login_saved_failed: "Saved login failed. Please sign in again.",
+        logout_confirm: "Log out and forget the saved account on this device?",
+        // Chat chips
+        chip_record: "Log a drama club activity on 2026/03/05, theme 'rehearsal', C 2h",
+        chip_reflection: "Write a reflection for my service club on leadership",
+        chip_help: "What are the 7 CAS learning outcomes?",
+        // Approval card
+        card_record_title: "Activity Record",
+        card_reflection_title: "Activity Reflection",
+        card_batch_title: "Weekly Batch Records",
+        card_badge_review: "Needs approval",
+        card_badge_done: "Submitted",
+        card_badge_cancelled: "Cancelled",
+        card_badge_running: "Submitting…",
+        card_club: "Club",
+        card_date: "Date",
+        card_theme: "Theme",
+        card_hours: "Hours C/A/S",
+        card_titles: "Titles",
+        card_outcomes: "Outcomes",
+        card_weekday: "Weekday",
+        card_range: "Date range",
+        card_weeks: "Weeks",
+        card_periodic: "Periodic",
+        card_description: "Generated description",
+        card_summary: "Summary",
+        card_content: "Reflection content",
+        card_sample: "Sample (first week)",
+        card_batch_note: "Each weekly record is generated and filled during submission.",
+        card_approve: "Approve & submit",
+        card_edit: "Edit",
+        card_cancel: "Cancel",
+        card_submitting: "Submitting to the school system…",
+        card_done: "Submitted successfully.",
+        card_cancelled_msg: "Cancelled. Nothing was submitted.",
+        card_need_login: "Please sign in first.",
+        card_need_outcome: "Please select at least one Learning Outcome.",
+        chat_disclaimer: "CAS Monster uses AI and may make mistakes. Always review generated content before approving.",
+        chat_empty: "Sorry, I didn't catch that. Could you rephrase, or tell me the club, date, theme and hours?",
+        attach_files: "Add files or photos",
+        attach_reading: "Reading…",
+        attach_too_many: "You can attach up to 5 files.",
+        attach_failed: "Could not read this file.",
+        attach_default: "Please read the attached file(s).",
+        quick_add_record: "Add Record",
+        quick_add_reflection: "Add Reflection",
+        quick_record_title: "Add Record",
+        quick_reflection_title: "Add Reflection",
+        quick_generate: "Generate Cards",
+        quick_request: "Request",
+        quick_notes: "Description",
+        quick_record_notes_ph: "Describe what happened in this activity. Qwen will generate the title and record content.",
+        quick_reflection_notes_ph: "Describe what you want to reflect on. Qwen will generate the title, summary, and reflection content.",
+        quick_no_clubs: "Please sign in and fetch clubs first.",
+        quick_need_desc: "Please enter a description for every request.",
+        quick_need_context: "Please enter a description or attach at least one readable file/photo for every request.",
+        quick_need_date: "Please select a date for every record.",
+        quick_cards_ready: "Generated review cards. Please check them before submitting.",
+        quick_attach: "Attach files or photos",
     },
     zh: {
         config: "\u914D\u7F6E",
@@ -114,7 +183,7 @@ const I18N = {
         end_date: "\u7ED3\u675F\u65E5\u671F",
         periodic_label: "\u5468\u671F\u6027\u6D3B\u52A8<br><small>(\u53EF\u9009)</small>",
         theme_desc: "\u4E3B\u9898/\u63CF\u8FF0",
-        auto_deepseek: "\u7531 DeepSeek \u81EA\u52A8\u751F\u6210",
+        auto_deepseek: "\u7531 Qwen \u81EA\u52A8\u751F\u6210",
         run_batch: "\u8FD0\u884C\u6BCF\u5468\u6279\u91CF",
         reflection: "\u53CD\u601D",
         num_reflections: "\u53CD\u601D\u6570\u91CF",
@@ -160,7 +229,7 @@ const I18N = {
         tut_step3_title: "\u7B2C\u4E09\u6B65\uFF1A\u586B\u5199\u8868\u5355",
         tut_step3: "\u5B8C\u6210\u6240\u6709\u5FC5\u586B\u5B57\u6BB5\u3002\u5BF9\u4E8E\u6BCF\u5468\u6279\u91CF\uFF0C\u5148\u9009\u62E9\u661F\u671F\uFF0C\u7136\u540E\u4F7F\u7528\u65E5\u5386\u9009\u62E9\u5F00\u59CB/\u7ED3\u675F\u65E5\u671F\uFF08\u53EA\u6709\u5339\u914D\u7684\u661F\u671F\u53EF\u9009\uFF09\u3002\u201C\u5468\u671F\u6027\u6D3B\u52A8\u201D\u5B57\u6BB5\u4E3A\u53EF\u9009 \u2014 \u5982\u679C\u586B\u5199\uFF0C\u6240\u6709\u751F\u6210\u7684\u8BB0\u5F55\u5C06\u5171\u4EAB\u76F8\u540C\u7684\u603B\u4E3B\u9898\u3002",
         tut_step4_title: "\u7B2C\u56DB\u6B65\uFF1A\u8FD0\u884C",
-        tut_step4: "\u70B9\u51FB\u8FD0\u884C\u6309\u94AE\u3002\u7CFB\u7EDF\u5C06\u767B\u5F55\u6821\u56ED\u7CFB\u7EDF\uFF0C\u901A\u8FC7 DeepSeek AI \u751F\u6210\u5185\u5BB9\uFF0C\u5E76\u81EA\u52A8\u586B\u5199\u8868\u5355\u3002\u67E5\u770B\u65E5\u5FD7\u9009\u9879\u5361\u548C\u9884\u89C8\u9762\u677F\u4EE5\u4E86\u89E3\u8FDB\u5EA6\u548C\u7ED3\u679C\u3002",
+        tut_step4: "\u70B9\u51FB\u8FD0\u884C\u6309\u94AE\u3002\u7CFB\u7EDF\u5C06\u767B\u5F55\u6821\u56ED\u7CFB\u7EDF\uFF0C\u901A\u8FC7 Qwen AI \u751F\u6210\u5185\u5BB9\uFF0C\u5E76\u81EA\u52A8\u586B\u5199\u8868\u5355\u3002\u67E5\u770B\u65E5\u5FD7\u9009\u9879\u5361\u548C\u9884\u89C8\u9762\u677F\u4EE5\u4E86\u89E3\u8FDB\u5EA6\u548C\u7ED3\u679C\u3002",
         tut_hours_title: "CAS \u5C0F\u65F6\u6570",
         tut_hours: "C = \u521B\u9020\u529B\uFF0CA = \u6D3B\u52A8\uFF0CS = \u670D\u52A1\u3002\u8F93\u5165\u6BCF\u4E2A\u7C7B\u522B\u7684\u5C0F\u65F6\u6570\u3002\u4E0D\u9002\u7528\u7684\u7C7B\u522B\u7559\u7A7A\u6216\u8F93\u5165 0\u3002",
         tut_tips_title: "\u63D0\u793A",
@@ -170,18 +239,89 @@ const I18N = {
         tut_tip4: "\u5BF9\u4E8E\u6279\u91CF\u8BB0\u5F55\uFF0C\u66F4\u5177\u4F53\u7684\u793E\u56E2\u63CF\u8FF0\u6709\u52A9\u4E8E AI \u751F\u6210\u66F4\u597D\u7684\u5185\u5BB9\u3002",
         tab_chat: "AI\u52A9\u624B",
         chat_welcome: "\u4F60\u597D\uFF01\u6211\u662F\u4F60\u7684 IB CAS AI \u987E\u95EE\uFF0C\u5DF2\u5B66\u4E60\u4E86\u6240\u6709CAS\u6587\u6863\u3002\u6709\u4EFB\u4F55\u5173\u4E8E CAS \u8981\u6C42\u3001\u6D3B\u52A8\u6216\u53CD\u601D\u7684\u95EE\u9898\u90FD\u53EF\u4EE5\u95EE\u6211\uFF01",
-        chat_placeholder: "\u8BE2\u95EE\u6709\u5173 IB CAS \u7684\u95EE\u9898\u2026",
+        chat_placeholder: "\u8BE2\u95EE CAS\uFF0C\u6216\u8BA9\u6211\u5E2E\u4F60\u586B\u5199\u8868\u5355\u2026",
         chat_send: "\u53D1\u9001",
         chat_thinking: "\u601D\u8003\u4E2D\u2026",
+        thinking_toggle: "Thinking",
+        thinking_label: "\u601D\u8003",
+        // Login
+        login_sub: "\u4F7F\u7528\u4F60\u7684 WFLA \u6821\u56ED\u8D26\u53F7\u767B\u5F55\u4EE5\u5F00\u59CB\u3002",
+        remember_me: "\u5728\u672C\u8BBE\u5907\u4E0A\u8BB0\u4F4F\u6211",
+        login_btn: "\u767B\u5F55",
+        logout_btn: "\u9000\u51FA\u767B\u5F55",
+        refresh_clubs: "\u5237\u65B0\u793E\u56E2",
+        login_empty: "\u8BF7\u8F93\u5165\u7528\u6237\u540D\u548C\u5BC6\u7801\u3002",
+        login_verifying: "\u767B\u5F55\u4E2D\u2026",
+        login_saved_failed: "\u4FDD\u5B58\u7684\u767B\u5F55\u5931\u8D25\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u3002",
+        logout_confirm: "\u9000\u51FA\u767B\u5F55\u5E76\u6E05\u9664\u672C\u8BBE\u5907\u4E0A\u4FDD\u5B58\u7684\u8D26\u53F7\uFF1F",
+        // Chat chips
+        chip_record: "\u5E2E\u6211\u586B\u620F\u5267\u793E 2026/03/05 \u7684\u8BB0\u5F55\uFF0C\u4E3B\u9898\u201C\u6392\u7EC3\u201D\uFF0CC 2\u5C0F\u65F6",
+        chip_reflection: "\u5E2E\u6211\u4E3A\u670D\u52A1\u793E\u5199\u4E00\u7BC7\u5173\u4E8E\u9886\u5BFC\u529B\u7684\u53CD\u601D",
+        chip_help: "CAS \u7684 7 \u4E2A\u5B66\u4E60\u6210\u679C\u662F\u4EC0\u4E48\uFF1F",
+        // Approval card
+        card_record_title: "\u6D3B\u52A8\u8BB0\u5F55",
+        card_reflection_title: "\u6D3B\u52A8\u53CD\u601D",
+        card_batch_title: "\u6BCF\u5468\u6279\u91CF\u8BB0\u5F55",
+        card_badge_review: "\u5F85\u6279\u51C6",
+        card_badge_done: "\u5DF2\u63D0\u4EA4",
+        card_badge_cancelled: "\u5DF2\u53D6\u6D88",
+        card_badge_running: "\u63D0\u4EA4\u4E2D\u2026",
+        card_club: "\u793E\u56E2",
+        card_date: "\u65E5\u671F",
+        card_theme: "\u4E3B\u9898",
+        card_hours: "\u5C0F\u65F6 C/A/S",
+        card_titles: "\u6807\u9898",
+        card_outcomes: "\u5B66\u4E60\u6210\u679C",
+        card_weekday: "\u661F\u671F",
+        card_range: "\u65E5\u671F\u8303\u56F4",
+        card_weeks: "\u5468\u6570",
+        card_periodic: "\u5468\u671F\u6027\u6D3B\u52A8",
+        card_description: "\u751F\u6210\u7684\u63CF\u8FF0",
+        card_summary: "\u6458\u8981",
+        card_content: "\u53CD\u601D\u6B63\u6587",
+        card_sample: "\u793A\u4F8B\uFF08\u7B2C\u4E00\u5468\uFF09",
+        card_batch_note: "\u6BCF\u5468\u8BB0\u5F55\u5C06\u5728\u63D0\u4EA4\u8FC7\u7A0B\u4E2D\u9010\u6761\u751F\u6210\u5E76\u586B\u5199\u3002",
+        card_approve: "\u6279\u51C6\u5E76\u63D0\u4EA4",
+        card_edit: "\u7F16\u8F91",
+        card_cancel: "\u53D6\u6D88",
+        card_submitting: "\u6B63\u5728\u63D0\u4EA4\u5230\u6821\u56ED\u7CFB\u7EDF\u2026",
+        card_done: "\u63D0\u4EA4\u6210\u529F\u3002",
+        card_cancelled_msg: "\u5DF2\u53D6\u6D88\uFF0C\u672A\u63D0\u4EA4\u4EFB\u4F55\u5185\u5BB9\u3002",
+        card_need_login: "\u8BF7\u5148\u767B\u5F55\u3002",
+        card_need_outcome: "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u5B66\u4E60\u6210\u679C\u3002",
+        chat_disclaimer: "CAS Monster \u7531 AI \u9A71\u52A8\uFF0C\u56DE\u7B54\u672A\u5FC5\u51C6\u786E\u3002\u6279\u51C6\u524D\u8BF7\u52A1\u5FC5\u68C0\u67E5\u751F\u6210\u7684\u5185\u5BB9\u3002",
+        chat_empty: "\u62B1\u6B49\uFF0C\u6211\u6CA1\u592A\u7406\u89E3\u3002\u80FD\u518D\u8BF4\u4E00\u904D\u5417\uFF1F\u6216\u76F4\u63A5\u544A\u8BC9\u6211\u793E\u56E2\u3001\u65E5\u671F\u3001\u4E3B\u9898\u548C\u5C0F\u65F6\u6570\u3002",
+        attach_files: "\u6DFB\u52A0\u6587\u4EF6\u6216\u7167\u7247",
+        attach_reading: "\u8BFB\u53D6\u4E2D\u2026",
+        attach_too_many: "\u6700\u591A\u53EA\u80FD\u9644\u52A0 5 \u4E2A\u6587\u4EF6\u3002",
+        attach_failed: "\u65E0\u6CD5\u8BFB\u53D6\u8BE5\u6587\u4EF6\u3002",
+        attach_default: "\u8BF7\u9605\u8BFB\u6211\u4E0A\u4F20\u7684\u6587\u4EF6\u3002",
+        quick_add_record: "\u6DFB\u52A0\u8BB0\u5F55",
+        quick_add_reflection: "\u6DFB\u52A0\u53CD\u601D",
+        quick_record_title: "\u6DFB\u52A0\u8BB0\u5F55",
+        quick_reflection_title: "\u6DFB\u52A0\u53CD\u601D",
+        quick_generate: "\u751F\u6210\u5361\u7247",
+        quick_request: "\u8BF7\u6C42",
+        quick_notes: "\u63CF\u8FF0",
+        quick_record_notes_ph: "\u63CF\u8FF0\u8FD9\u6B21\u6D3B\u52A8\u53D1\u751F\u4E86\u4EC0\u4E48\u3002Qwen \u4F1A\u751F\u6210\u6807\u9898\u548C\u8BB0\u5F55\u5185\u5BB9\u3002",
+        quick_reflection_notes_ph: "\u63CF\u8FF0\u4F60\u60F3\u53CD\u601D\u7684\u5185\u5BB9\u3002Qwen \u4F1A\u751F\u6210\u6807\u9898\u3001\u6458\u8981\u548C\u53CD\u601D\u6B63\u6587\u3002",
+        quick_no_clubs: "\u8BF7\u5148\u767B\u5F55\u5E76\u83B7\u53D6\u793E\u56E2\u3002",
+        quick_need_desc: "\u8BF7\u4E3A\u6BCF\u4E2A\u8BF7\u6C42\u586B\u5199\u63CF\u8FF0\u3002",
+        quick_need_context: "\u8BF7\u4E3A\u6BCF\u4E2A\u8BF7\u6C42\u586B\u5199\u63CF\u8FF0\uFF0C\u6216\u9644\u52A0\u81F3\u5C11\u4E00\u4E2A\u53EF\u8BFB\u53D6\u7684\u6587\u4EF6/\u7167\u7247\u3002",
+        quick_need_date: "\u8BF7\u4E3A\u6BCF\u6761\u8BB0\u5F55\u9009\u62E9\u65E5\u671F\u3002",
+        quick_cards_ready: "\u5DF2\u751F\u6210\u5BA1\u6838\u5361\u7247\uFF0C\u8BF7\u68C0\u67E5\u540E\u518D\u63D0\u4EA4\u3002",
+        quick_attach: "\u6DFB\u52A0\u6587\u4EF6\u6216\u7167\u7247",
     },
 };
 
 let currentLang = localStorage.getItem("cas-lang") || "en";
+const THINKING_KEY = "cas-thinking-enabled";
 
 function applyLang(lang) {
     currentLang = lang;
     const t = I18N[lang];
-    document.getElementById("lang-toggle").textContent = lang === "en" ? "\u4E2D\u6587" : "EN";
+    const langLabel = lang === "en" ? "\u4E2D\u6587" : "EN";
+    document.querySelectorAll("#lang-toggle, #login-lang-toggle").forEach((b) => { b.textContent = langLabel; });
     // Text content
     document.querySelectorAll("[data-i18n]").forEach((el) => {
         const key = el.getAttribute("data-i18n");
@@ -210,11 +350,25 @@ function toggleLang() {
     applyLang(next);
 }
 
+function isChatThinkingEnabled() {
+    const el = document.getElementById("chat-thinking-toggle");
+    return !!(el && el.checked);
+}
+
+function saveThinkingPreference() {
+    localStorage.setItem(THINKING_KEY, isChatThinkingEnabled() ? "1" : "0");
+}
+
+function initThinkingPreference() {
+    const el = document.getElementById("chat-thinking-toggle");
+    if (el) el.checked = localStorage.getItem(THINKING_KEY) === "1";
+}
+
 // ---- Dark mode ----
 function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
-    const btn = document.getElementById("theme-toggle");
-    if (btn) btn.innerHTML = theme === "dark" ? "&#9788;" : "&#9790;";
+    const icon = theme === "dark" ? "&#9788;" : "&#9790;";
+    document.querySelectorAll("#theme-toggle, #login-theme-toggle").forEach((b) => { b.innerHTML = icon; });
 }
 
 function toggleTheme() {
@@ -227,11 +381,19 @@ function toggleTheme() {
 // Apply saved theme and language immediately
 applyTheme(localStorage.getItem("cas-theme") || "light");
 applyLang(currentLang);
+initThinkingPreference();
 
 const socket = io();
 
 // ---- State ----
 let isRunning = false;
+let loginMode = null;            // null | "manual" | "auto"
+let CURRENT_USER = "";
+let CURRENT_PW = "";
+let availableClubs = [];          // clubs known to the chat agent
+let availableRecordClubs = [];
+let availableReflectionClubs = [];
+const submittingCards = { record: [], reflection: [], batch: [] }; // FIFO of card ids awaiting task_done
 
 // ---- Socket events ----
 socket.on("connect", () => {
@@ -247,6 +409,19 @@ socket.on("log", (data) => {
 });
 
 socket.on("error", (data) => {
+    // During (auto) login, surface failures on the login screen instead of an alert.
+    if (loginMode) {
+        const t = I18N[currentLang];
+        if (loginMode === "auto") {
+            doLogout(true);
+            showLoginError(t.login_saved_failed || data.msg);
+        } else {
+            showLoginError(data.msg);
+        }
+        resetLoginButton();
+        loginMode = null;
+        return;
+    }
     appendLog("[Error] " + data.msg);
     alert(data.msg);
 });
@@ -255,8 +430,21 @@ socket.on("clubs_fetched", (data) => {
     populateSelect("rec-club", data.clubs_records);
     populateSelect("batch-club", data.clubs_records);
     populateSelect("ref-club", data.clubs_reflection);
+    availableRecordClubs = data.clubs_records || [];
+    availableReflectionClubs = data.clubs_reflection || [];
+    availableClubs = data.clubs_reflection || data.clubs_records || [];
+    refreshQuickClubSelects();
     setButtonsRunning(false);
     appendLog("[Clubs] Dropdowns updated.");
+    // Finishing a login round-trip?
+    if (loginMode) {
+        if (loginMode === "manual" && document.getElementById("remember-me").checked) {
+            saveCreds(CURRENT_USER, CURRENT_PW);
+        }
+        enterApp();
+        resetLoginButton();
+        loginMode = null;
+    }
 });
 
 socket.on("preview_record", (data) => {
@@ -268,8 +456,13 @@ socket.on("preview_reflection", (data) => {
     document.getElementById("preview-reflection").textContent = data.content;
 });
 
-socket.on("task_done", () => {
+socket.on("task_done", (data) => {
     setButtonsRunning(false);
+    const task = (data && data.task) || "";
+    if (submittingCards[task] && submittingCards[task].length) {
+        const cardId = submittingCards[task].shift();
+        markCardDone(cardId);
+    }
 });
 
 // ---- Tab switching ----
@@ -279,7 +472,33 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
         document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
         btn.classList.add("active");
         document.getElementById(btn.dataset.tab).classList.add("active");
+        updateChatMode();
     });
+});
+
+// ---- Fullscreen (Gemini-style) chat mode ----
+function positionChat() {
+    const headers = document.querySelector(".tab-headers");
+    if (!headers) return;
+    const top = Math.max(0, Math.round(headers.getBoundingClientRect().bottom));
+    document.documentElement.style.setProperty("--chat-top", top + "px");
+}
+
+function updateChatMode() {
+    const chatTab = document.getElementById("tab-chat");
+    const on = !!chatTab && chatTab.classList.contains("active");
+    document.body.classList.toggle("chat-active", on);
+    if (on) {
+        requestAnimationFrame(() => {
+            positionChat();
+            const msgs = document.getElementById("chat-messages");
+            if (msgs) msgs.scrollTop = msgs.scrollHeight;
+        });
+    }
+}
+
+window.addEventListener("resize", () => {
+    if (document.body.classList.contains("chat-active")) positionChat();
 });
 
 document.querySelectorAll(".preview-tab-btn").forEach((btn) => {
@@ -322,7 +541,7 @@ function getAccount() {
 function setButtonsRunning(running) {
     isRunning = running;
     const btns = [
-        "btn-fetch-clubs",
+        "btn-refresh-clubs",
         "btn-run-record",
         "btn-run-batch",
         "btn-run-reflection",
@@ -462,9 +681,94 @@ document.getElementById("batch-weekday").addEventListener("change", () => {
     document.getElementById("batch-end").value = "";
 });
 
+// ---- Login / Logout ----
+const CREDS_KEY = "cas-creds";
+
+function saveCreds(u, p) {
+    try { localStorage.setItem(CREDS_KEY, JSON.stringify({ u, p })); } catch (e) {}
+}
+function loadCreds() {
+    try { return JSON.parse(localStorage.getItem(CREDS_KEY) || "null"); } catch (e) { return null; }
+}
+function clearCreds() {
+    try { localStorage.removeItem(CREDS_KEY); } catch (e) {}
+}
+
+function enterApp() {
+    document.body.classList.add("logged-in");
+    updateChatMode();
+}
+function showLogin() { document.body.classList.remove("logged-in"); }
+
+function showLoginError(msg) {
+    const el = document.getElementById("login-error");
+    if (el) el.textContent = msg || "";
+}
+
+function resetLoginButton() {
+    const btn = document.getElementById("btn-login");
+    if (!btn) return;
+    btn.disabled = false;
+    btn.textContent = I18N[currentLang].login_btn || "Sign in";
+}
+
+function doLogin() {
+    if (loginMode) return;
+    const t = I18N[currentLang];
+    const u = document.getElementById("username").value.trim();
+    const p = document.getElementById("password").value.trim();
+    if (!u || !p) { showLoginError(t.login_empty); return; }
+    CURRENT_USER = u;
+    CURRENT_PW = p;
+    loginMode = "manual";
+    showLoginError("");
+    const btn = document.getElementById("btn-login");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>' + (t.login_verifying || "Signing in…");
+    appendLog("[Login] Verifying account with the school system…");
+    socket.emit("fetch_clubs", { username: u, password: p });
+}
+
+function doLogout(silent) {
+    if (!silent) {
+        const t = I18N[currentLang];
+        if (!confirm(t.logout_confirm || "Log out?")) return;
+    }
+    clearCreds();
+    CURRENT_USER = "";
+    CURRENT_PW = "";
+    availableClubs = [];
+    availableRecordClubs = [];
+    availableReflectionClubs = [];
+    const pw = document.getElementById("password");
+    if (pw) pw.value = "";
+    ["rec-club", "batch-club", "ref-club"].forEach((id) => {
+        const sel = document.getElementById(id);
+        if (sel) { sel.innerHTML = ""; sel.disabled = true; }
+    });
+    showLogin();
+}
+
+function tryAutoLogin() {
+    const c = loadCreds();
+    if (!c || !c.u || !c.p) return;
+    document.getElementById("username").value = c.u;
+    document.getElementById("password").value = c.p;
+    document.getElementById("remember-me").checked = true;
+    CURRENT_USER = c.u;
+    CURRENT_PW = c.p;
+    loginMode = "auto";
+    enterApp(); // optimistic; reverted by the error handler if creds fail
+    appendLog("[Login] Auto sign-in with saved account…");
+    socket.emit("fetch_clubs", { username: c.u, password: c.p });
+}
+
+// Attempt auto-login once the socket is connected (emits buffer until then).
+tryAutoLogin();
+
 // ---- Actions ----
 function fetchClubs() {
-    if (isRunning) return;
+    if (isRunning || loginMode) return;
     try {
         const acc = getAccount();
         setButtonsRunning(true);
@@ -659,8 +963,15 @@ function appendChatBubble(role, text, isThinking) {
     if (isThinking) div.id = "chat-thinking-bubble";
     const inner = document.createElement("div");
     inner.className = "chat-bubble-inner";
+    if (isThinking) {
+        inner.innerHTML = `<span class="thinking-dots" aria-label="${escapeAttr(text || "Thinking")}"><span></span><span></span><span></span></span>`;
+        div.appendChild(inner);
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
     // Render assistant replies as Markdown; keep user input / status as plain text.
-    if (role.indexOf("assistant") === 0 && !isThinking) {
+    if (role.indexOf("assistant") === 0) {
         inner.classList.add("markdown");
         inner.innerHTML = renderMarkdown(text);
     } else {
@@ -673,38 +984,603 @@ function appendChatBubble(role, text, isThinking) {
     return div;
 }
 
+function appendThinkingContent(text) {
+    if (!text || !text.trim()) return null;
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = "chat-thinking-content";
+    div.innerHTML =
+        `<div class="chat-thinking-label">${escapeHtml(I18N[currentLang].thinking_label || "Thinking")}</div>` +
+        `<div class="chat-thinking-body">${escapeHtml(text)}</div>`;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div;
+}
+
+function hideChatSuggestions() {
+    const s = document.getElementById("chat-suggestions");
+    if (s) s.style.display = "none";
+}
+
+function useSuggestion(el) {
+    const input = document.getElementById("chat-input");
+    input.value = el.textContent.trim();
+    autoGrowInput(input);
+    input.focus();
+}
+
+// Auto-size a textarea to fit its content up to data-maxlines lines, then scroll.
+function autoGrow(el) {
+    const maxLines = parseInt(el.dataset.maxlines || "10", 10);
+    const cs = getComputedStyle(el);
+    let line = parseFloat(cs.lineHeight);
+    if (isNaN(line)) line = parseFloat(cs.fontSize) * 1.4;
+    const padT = parseFloat(cs.paddingTop) || 0;
+    const padB = parseFloat(cs.paddingBottom) || 0;
+    const brdT = parseFloat(cs.borderTopWidth) || 0;
+    const brdB = parseFloat(cs.borderBottomWidth) || 0;
+    const maxH = line * maxLines + padT + padB + brdT + brdB;
+    el.style.height = "auto";
+    const needed = el.scrollHeight + brdT + brdB;
+    el.style.height = Math.min(needed, maxH) + "px";
+    el.style.overflowY = needed > maxH + 1 ? "auto" : "hidden";
+}
+
+function autoGrowInput(el) {
+    el.dataset.maxlines = "7";
+    autoGrow(el);
+}
+
+function onChatKeydown(e) {
+    // Enter sends; Shift+Enter inserts a newline.
+    if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+    }
+}
+
+// ---- Quick Add Record / Reflection panels ----
+let quickMode = "record";
+let quickSeq = 0;
+const quickAttachments = {};
+
+function getQuickClubs() {
+    return quickMode === "record" ? availableRecordClubs : availableReflectionClubs;
+}
+
+function optionHtml(options, selected) {
+    return (options || []).map((opt) => {
+        const sel = opt === selected ? " selected" : "";
+        return `<option value="${escapeAttr(opt)}"${sel}>${escapeHtml(opt)}</option>`;
+    }).join("");
+}
+
+function escapeAttr(s) {
+    return escapeHtml(String(s == null ? "" : s)).replace(/"/g, "&quot;");
+}
+
+function refreshQuickClubSelects() {
+    document.querySelectorAll(".quick-club-select").forEach((sel) => {
+        const selected = sel.value;
+        const mode = sel.closest(".quick-request-card")?.dataset.mode || quickMode;
+        const clubs = mode === "record" ? availableRecordClubs : availableReflectionClubs;
+        sel.innerHTML = optionHtml(clubs, selected);
+        sel.disabled = clubs.length === 0;
+    });
+}
+
+function openQuickPanel(mode) {
+    quickMode = mode;
+    const t = I18N[currentLang];
+    const modal = document.getElementById("quick-modal");
+    const title = document.getElementById("quick-modal-title");
+    const btn = document.getElementById("quick-generate-btn");
+    document.getElementById("chat-attach-menu").classList.remove("open");
+    title.textContent = mode === "record" ? t.quick_record_title : t.quick_reflection_title;
+    btn.textContent = t.quick_generate;
+    Object.keys(quickAttachments).forEach((key) => delete quickAttachments[key]);
+    document.getElementById("quick-request-list").innerHTML = "";
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    addQuickRequest(mode);
+}
+
+function closeQuickPanel() {
+    const modal = document.getElementById("quick-modal");
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function addQuickRequest(mode) {
+    const modeToUse = mode || quickMode;
+    const list = document.getElementById("quick-request-list");
+    const t = I18N[currentLang];
+    const card = document.createElement("div");
+    const id = "quick-" + (++quickSeq);
+    card.className = "quick-request-card";
+    card.dataset.mode = modeToUse;
+    card.dataset.id = id;
+    quickAttachments[id] = [];
+
+    const clubs = modeToUse === "record" ? availableRecordClubs : availableReflectionClubs;
+    const notesPh = modeToUse === "record" ? t.quick_record_notes_ph : t.quick_reflection_notes_ph;
+    const heading = modeToUse === "record" ? t.quick_add_record : t.quick_add_reflection;
+    let body = `
+        <div class="quick-card-head">
+            <div class="quick-card-title">${escapeHtml(heading)} <span>${list.children.length + 1}</span></div>
+        </div>
+        <div class="quick-form-row">
+            <label class="quick-label">${escapeHtml(t.club)}</label>
+            <select class="form-select quick-club-select"${clubs.length ? "" : " disabled"}>
+                ${optionHtml(clubs)}
+            </select>
+        </div>`;
+
+    if (modeToUse === "record") {
+        body += `
+            <div class="quick-form-row">
+                <label class="quick-label">${escapeHtml(t.date)}</label>
+                <div class="date-picker-wrap">
+                    <input type="text" class="form-input quick-date-input" readonly placeholder="${escapeHtml(t.ph_start_date || "Select date")}">
+                    <div class="cal-dropdown quick-cal"></div>
+                </div>
+            </div>
+            <div class="quick-form-row">
+                <label class="quick-label">${escapeHtml(t.hours_cas)}</label>
+                <div class="hours-group quick-hours">
+                    <span>C</span><input type="text" class="form-input-sm quick-c" placeholder="0">
+                    <span>A</span><input type="text" class="form-input-sm quick-a" placeholder="0">
+                    <span>S</span><input type="text" class="form-input-sm quick-s" placeholder="0">
+                </div>
+            </div>`;
+    } else {
+        body += `
+            <div class="quick-form-row quick-outcome-row">
+                <label class="quick-label">${escapeHtml(t.learning_outcomes)}</label>
+                <div class="quick-outcomes">
+                    ${ALL_OUTCOMES.map((o) => `<label class="quick-outcome"><input type="checkbox" value="${escapeAttr(o)}"> <span>${escapeHtml(o)}</span></label>`).join("")}
+                </div>
+            </div>`;
+    }
+
+    body += `
+        <div class="quick-form-row quick-notes-row">
+            <label class="quick-label">${escapeHtml(t.quick_notes)}</label>
+            <textarea class="form-textarea quick-description" rows="4" placeholder="${escapeAttr(notesPh)}"></textarea>
+        </div>
+        <div class="quick-form-row quick-file-row">
+            <label class="quick-label">${escapeHtml(t.attach_files)}</label>
+            <div class="quick-file-control">
+                <button type="button" class="quick-file-btn" onclick="pickQuickFiles(this)">
+                    <span class="quick-file-icon">+</span><span>${escapeHtml(t.quick_attach || t.attach_files)}</span>
+                </button>
+                <input type="file" class="quick-file-input" multiple hidden onchange="onQuickFilesPicked(event)"
+                       accept=".txt,.md,.csv,.log,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.webp,.bmp,.gif">
+                <div class="quick-attachments"></div>
+            </div>
+        </div>
+        <div class="quick-card-actions">
+            <button type="button" class="quick-trash-btn" title="Delete request" onclick="removeQuickRequest(this)">&#128465;</button>
+        </div>`;
+
+    card.innerHTML = body;
+    list.appendChild(card);
+    const ta = card.querySelector(".quick-description");
+    ta.dataset.maxlines = "8";
+    ta.addEventListener("input", () => autoGrow(ta));
+    if (modeToUse === "record") {
+        createQuickCalendar(card.querySelector(".quick-cal"), card.querySelector(".quick-date-input"));
+    }
+    updateQuickRequestNumbers();
+}
+
+function removeQuickRequest(btn) {
+    const card = btn.closest(".quick-request-card");
+    const list = document.getElementById("quick-request-list");
+    if (!card || list.children.length <= 1) return;
+    delete quickAttachments[card.dataset.id];
+    card.remove();
+    updateQuickRequestNumbers();
+}
+
+function updateQuickRequestNumbers() {
+    document.querySelectorAll(".quick-request-card .quick-card-title span").forEach((el, i) => {
+        el.textContent = String(i + 1);
+    });
+}
+
+function pickQuickFiles(btn) {
+    const card = btn.closest(".quick-request-card");
+    const input = card && card.querySelector(".quick-file-input");
+    if (input) input.click();
+}
+
+function renderQuickAttachments(card) {
+    const box = card.querySelector(".quick-attachments");
+    if (!box) return;
+    const entries = quickAttachments[card.dataset.id] || [];
+    const t = I18N[currentLang];
+    box.innerHTML = "";
+    entries.forEach((a) => {
+        const chip = document.createElement("div");
+        chip.className = "chat-chip-file quick-chip-file" + (a.loading ? " is-loading" : "") + (a.error ? " is-error" : "");
+        const ico = a.loading ? '<span class="spinner"></span>' : `<span class="cf-ico">${fileIcon(a.name)}</span>`;
+        let meta;
+        if (a.loading) meta = t.attach_reading || "Reading...";
+        else if (a.error) meta = a.note || (t.attach_failed || "Could not read file.");
+        else meta = (a.chars || 0) + " chars" + (a.truncated ? " - truncated" : "");
+        chip.innerHTML = ico +
+            `<span class="cf-body"><span class="cf-name">${escapeHtml(a.name)}</span>` +
+            `<span class="cf-meta">${escapeHtml(meta)}</span></span>` +
+            `<button class="cf-remove" type="button" title="Remove">&times;</button>`;
+        chip.querySelector(".cf-remove").addEventListener("click", () => {
+            quickAttachments[card.dataset.id] = (quickAttachments[card.dataset.id] || []).filter((x) => x !== a);
+            renderQuickAttachments(card);
+        });
+        box.appendChild(chip);
+    });
+}
+
+async function onQuickFilesPicked(e) {
+    const input = e.target;
+    const card = input.closest(".quick-request-card");
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (!card || !files.length) return;
+
+    const t = I18N[currentLang];
+    const id = card.dataset.id;
+    if (!quickAttachments[id]) quickAttachments[id] = [];
+    const room = 5 - quickAttachments[id].length;
+    if (room <= 0) { alert(t.attach_too_many || "You can attach up to 5 files."); return; }
+    const batch = files.slice(0, room);
+    if (files.length > room) alert(t.attach_too_many || "You can attach up to 5 files.");
+
+    const entries = batch.map((f) => ({
+        id: ++attSeq, name: f.name, text: "", chars: 0, note: "", loading: true, error: false,
+    }));
+    quickAttachments[id].push(...entries);
+    renderQuickAttachments(card);
+
+    const form = new FormData();
+    batch.forEach((f) => form.append("files", f));
+    try {
+        const resp = await fetch("/api/upload", { method: "POST", body: form });
+        const data = await resp.json();
+        if (data.error) {
+            entries.forEach((en) => { en.loading = false; en.error = true; en.note = data.error; });
+        } else {
+            const results = data.files || [];
+            entries.forEach((en, i) => {
+                const r = results[i] || {};
+                en.loading = false;
+                en.text = r.text || "";
+                en.chars = r.chars || 0;
+                en.truncated = !!r.truncated;
+                en.note = r.note || "";
+                en.error = !en.text;
+            });
+        }
+    } catch (err) {
+        entries.forEach((en) => { en.loading = false; en.error = true; en.note = "Network error"; });
+    }
+    renderQuickAttachments(card);
+}
+
+function createQuickCalendar(cal, input) {
+    let viewYear = new Date().getFullYear();
+    let viewMonth = new Date().getMonth();
+
+    input.addEventListener("click", (e) => {
+        e.stopPropagation();
+        document.querySelectorAll(".cal-dropdown").forEach((c) => { if (c !== cal) c.classList.remove("open"); });
+        cal.classList.toggle("open");
+        if (cal.classList.contains("open")) render();
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!cal.contains(e.target) && e.target !== input) cal.classList.remove("open");
+    });
+
+    function render() {
+        const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+        const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+        const daysInPrev = new Date(viewYear, viewMonth, 0).getDate();
+        let html = `<div class="cal-nav">
+            <button class="cal-nav-btn" data-action="prev-year">&laquo;</button>
+            <button class="cal-nav-btn" data-action="prev-month">&lsaquo;</button>
+            <span class="cal-title">${MONTH_NAMES[viewMonth]} ${viewYear}</span>
+            <button class="cal-nav-btn" data-action="next-month">&rsaquo;</button>
+            <button class="cal-nav-btn" data-action="next-year">&raquo;</button>
+        </div><div class="cal-grid">`;
+        ["Mo","Tu","We","Th","Fr","Sa","Su"].forEach((d) => { html += `<div class="cal-header">${d}</div>`; });
+
+        const startOffset = (firstDay + 6) % 7;
+        for (let i = 0; i < 42; i++) {
+            let dayNum = i - startOffset + 1;
+            let inMonth = true;
+            let dispYear = viewYear, dispMonth = viewMonth, dispDay;
+            if (dayNum < 1) {
+                inMonth = false;
+                const pm = viewMonth === 0 ? 11 : viewMonth - 1;
+                const py = viewMonth === 0 ? viewYear - 1 : viewYear;
+                dispDay = daysInPrev + dayNum;
+                dispYear = py; dispMonth = pm;
+            } else if (dayNum > daysInMonth) {
+                inMonth = false;
+                const nm = viewMonth === 11 ? 0 : viewMonth + 1;
+                const ny = viewMonth === 11 ? viewYear + 1 : viewYear;
+                dispDay = dayNum - daysInMonth;
+                dispYear = ny; dispMonth = nm;
+            } else {
+                dispDay = dayNum;
+            }
+            const dateStr = `${dispYear}/${String(dispMonth + 1).padStart(2, "0")}/${String(dispDay).padStart(2, "0")}`;
+            html += `<div class="cal-day cal-allowed${inMonth ? "" : " cal-dim"}" data-date="${dateStr}">${dispDay}</div>`;
+        }
+        html += `</div>`;
+        cal.innerHTML = html;
+
+        cal.querySelectorAll(".cal-nav-btn").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === "prev-year") viewYear--;
+                else if (action === "next-year") viewYear++;
+                else if (action === "prev-month") { viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; } }
+                else if (action === "next-month") { viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; } }
+                render();
+            });
+        });
+        cal.querySelectorAll(".cal-day.cal-allowed").forEach((el) => {
+            el.addEventListener("click", (e) => {
+                e.stopPropagation();
+                input.value = el.dataset.date;
+                cal.classList.remove("open");
+            });
+        });
+    }
+}
+
+async function submitQuickPanel() {
+    const t = I18N[currentLang];
+    const cards = Array.from(document.querySelectorAll("#quick-request-list .quick-request-card"));
+    const quickThinkingEnabled = !!document.getElementById("quick-thinking-toggle")?.checked;
+    const requests = [];
+    try {
+        if (!getQuickClubs().length) throw new Error(t.quick_no_clubs);
+        cards.forEach((card) => {
+            const club = card.querySelector(".quick-club-select").value;
+            const description = card.querySelector(".quick-description").value.trim();
+            const attachments = quickAttachments[card.dataset.id] || [];
+            if (attachments.some((a) => a.loading)) throw new Error(t.attach_reading || "Reading files...");
+            const readyAttachments = attachments
+                .filter((a) => a.text && !a.error)
+                .map((a) => ({ name: a.name, text: a.text }));
+            if (!club) throw new Error(t.quick_no_clubs);
+            if (!description && readyAttachments.length === 0) {
+                throw new Error(t.quick_need_context || t.quick_need_desc);
+            }
+            if (quickMode === "record") {
+                const date = card.querySelector(".quick-date-input").value;
+                if (!date) throw new Error(t.quick_need_date);
+                requests.push({
+                    club,
+                    date,
+                    description,
+                    attachments: readyAttachments,
+                    c_hours: card.querySelector(".quick-c").value.trim() || "0",
+                    a_hours: card.querySelector(".quick-a").value.trim() || "0",
+                    s_hours: card.querySelector(".quick-s").value.trim() || "0",
+                });
+            } else {
+                const outcomes = Array.from(card.querySelectorAll(".quick-outcome input:checked")).map((cb) => cb.value);
+                if (!outcomes.length) throw new Error(t.card_need_outcome);
+                requests.push({ club, description, outcomes, attachments: readyAttachments });
+            }
+        });
+    } catch (err) {
+        alert(err.message);
+        return;
+    }
+
+    const btn = document.getElementById("quick-generate-btn");
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>' + (t.chat_thinking || "Thinking...");
+    try {
+        const resp = await fetch("/api/quick_proposals", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: quickMode, requests, thinking: quickThinkingEnabled }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || data.error) throw new Error(data.error || "Generation failed.");
+        closeQuickPanel();
+        (data.proposals || []).forEach((proposal) => renderProposalCard(proposal));
+        appendChatBubble("assistant", t.quick_cards_ready);
+        hideChatSuggestions();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = t.quick_generate;
+    }
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeQuickPanel();
+});
+
+// ---- File attachments (uploaded to Qwen-Long file-extract via /api/upload) ----
+let pendingAttachments = [];
+let attSeq = 0;
+
+function fileIcon(name) {
+    const ext = (name.split(".").pop() || "").toLowerCase();
+    if (["jpg", "jpeg", "png", "webp", "bmp", "gif"].includes(ext)) return "🖼️";
+    if (ext === "pdf") return "📕";
+    if (ext === "docx") return "📄";
+    if (["xlsx", "csv"].includes(ext)) return "📊";
+    return "📄";
+}
+
+function toggleAttachMenu(e) {
+    e.stopPropagation();
+    document.getElementById("chat-attach-menu").classList.toggle("open");
+}
+
+document.addEventListener("click", (e) => {
+    const menu = document.getElementById("chat-attach-menu");
+    const btn = document.getElementById("chat-plus-btn");
+    if (menu && !menu.contains(e.target) && e.target !== btn) menu.classList.remove("open");
+});
+
+function pickFiles() {
+    document.getElementById("chat-attach-menu").classList.remove("open");
+    document.getElementById("chat-file-input").click();
+}
+
+function renderAttachments() {
+    const c = document.getElementById("chat-attachments");
+    if (!c) return;
+    const t = I18N[currentLang];
+    c.innerHTML = "";
+    pendingAttachments.forEach((a) => {
+        const chip = document.createElement("div");
+        chip.className = "chat-chip-file" + (a.loading ? " is-loading" : "") + (a.error ? " is-error" : "");
+        const ico = a.loading ? '<span class="spinner"></span>' : `<span class="cf-ico">${fileIcon(a.name)}</span>`;
+        let meta;
+        if (a.loading) meta = t.attach_reading || "Reading…";
+        else if (a.error) meta = a.note || (t.attach_failed || "Could not read file.");
+        else meta = (a.chars || 0) + " chars" + (a.truncated ? " • truncated" : "");
+        chip.innerHTML = ico +
+            `<span class="cf-body"><span class="cf-name">${escapeHtml(a.name)}</span>` +
+            `<span class="cf-meta">${escapeHtml(meta)}</span></span>` +
+            `<button class="cf-remove" type="button" title="Remove">×</button>`;
+        chip.querySelector(".cf-remove").addEventListener("click", () => {
+            pendingAttachments = pendingAttachments.filter((x) => x !== a);
+            renderAttachments();
+        });
+        c.appendChild(chip);
+    });
+}
+
+async function onFilesPicked(e) {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    const t = I18N[currentLang];
+    const room = 5 - pendingAttachments.length;
+    if (room <= 0) { alert(t.attach_too_many || "You can attach up to 5 files."); return; }
+    const batch = files.slice(0, room);
+    if (files.length > room) alert(t.attach_too_many || "You can attach up to 5 files.");
+
+    const entries = batch.map((f) => ({
+        id: ++attSeq, name: f.name, text: "", chars: 0, note: "", loading: true, error: false,
+    }));
+    pendingAttachments.push(...entries);
+    renderAttachments();
+
+    const form = new FormData();
+    batch.forEach((f) => form.append("files", f));
+    try {
+        const resp = await fetch("/api/upload", { method: "POST", body: form });
+        const data = await resp.json();
+        if (data.error) {
+            entries.forEach((en) => { en.loading = false; en.error = true; en.note = data.error; });
+        } else {
+            const results = data.files || [];
+            entries.forEach((en, i) => {
+                const r = results[i] || {};
+                en.loading = false;
+                en.text = r.text || "";
+                en.chars = r.chars || 0;
+                en.truncated = !!r.truncated;
+                en.note = r.note || "";
+                en.error = !en.text;
+            });
+        }
+    } catch (err) {
+        entries.forEach((en) => { en.loading = false; en.error = true; en.note = "Network error"; });
+    }
+    renderAttachments();
+}
+
 async function sendChat() {
     const input = document.getElementById("chat-input");
-    const message = input.value.trim();
-    if (!message) return;
+    const typed = input.value.trim();
+    const sentAttachments = pendingAttachments
+        .filter((a) => a.text && !a.loading)
+        .map((a) => ({ name: a.name, text: a.text }));
+    if (!typed && sentAttachments.length === 0) return;
+
+    const t = I18N[currentLang];
+    const message = typed || (t.attach_default || "Please read the attached file(s).");
 
     input.value = "";
-    appendChatBubble("user", message);
+    autoGrowInput(input);
+    hideChatSuggestions();
+    const tagNames = sentAttachments.map((a) => a.name);
+    pendingAttachments = [];
+    renderAttachments();
+
+    const userBubble = appendChatBubble("user", message);
+    if (tagNames.length) {
+        const tags = document.createElement("div");
+        tags.className = "chat-attach-tags";
+        tags.textContent = "📎 " + tagNames.join(", ");
+        const inner = userBubble.querySelector(".chat-bubble-inner");
+        if (inner) inner.appendChild(tags);
+    }
 
     const btn = document.getElementById("btn-send-chat");
     btn.disabled = true;
     input.disabled = true;
 
-    const t = I18N[currentLang];
+    const thinkingEnabled = isChatThinkingEnabled();
     const thinkingBubble = appendChatBubble("assistant thinking", t.chat_thinking || "Thinking...", true);
 
     try {
+        const cleanHistory = chatHistory.filter((h) =>
+            h && (h.role === "user" || h.role === "assistant") &&
+            typeof h.content === "string" && h.content.trim()
+        );
         const resp = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message, history: chatHistory }),
+            body: JSON.stringify({
+                message,
+                history: cleanHistory,
+                clubs: availableClubs,
+                attachments: sentAttachments,
+                thinking: thinkingEnabled,
+            }),
         });
         const data = await resp.json();
         thinkingBubble.remove();
+        chatHistory.push({ role: "user", content: message });
         if (data.error) {
             appendChatBubble("assistant", "Error: " + data.error);
         } else {
-            appendChatBubble("assistant", data.reply);
-            chatHistory.push({ role: "user", content: message });
-            chatHistory.push({ role: "assistant", content: data.reply });
-            // Keep history manageable
-            if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+            if (thinkingEnabled && data.reasoning) {
+                appendThinkingContent(data.reasoning);
+            }
+            if (data.reply) {
+                appendChatBubble("assistant", data.reply);
+                chatHistory.push({ role: "assistant", content: data.reply, reasoning_content: data.reasoning || "" });
+            }
+            if (data.proposal) {
+                renderProposalCard(data.proposal);
+                chatHistory.push({
+                    role: "assistant",
+                    content: "[Showed a " + data.proposal.action + " card for the user to approve.]",
+                    reasoning_content: data.reasoning || "",
+                });
+            } else if (!data.reply) {
+                appendChatBubble("assistant", I18N[currentLang].chat_empty || "…");
+            }
         }
+        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
     } catch (e) {
         thinkingBubble.remove();
         appendChatBubble("assistant", "Network error: " + e.message);
@@ -713,4 +1589,173 @@ async function sendChat() {
         input.disabled = false;
         input.focus();
     }
+}
+
+// ---- Gemini-style approval cards ----
+let cardSeq = 0;
+const cardProposals = {}; // id -> proposal
+const ALL_OUTCOMES = ["Awareness", "Challenge", "Initiative", "Collaboration",
+                      "Commitment", "Global Value", "Ethics", "New Skills"];
+
+function esc(s) {
+    return escapeHtml(String(s == null ? "" : s));
+}
+
+function renderProposalCard(p) {
+    const t = I18N[currentLang];
+    const id = "cas-card-" + (++cardSeq);
+    cardProposals[id] = p;
+    const container = document.getElementById("chat-messages");
+    const card = document.createElement("div");
+    card.className = "cas-card";
+    card.id = id;
+
+    let title = "", icon = "📝", fields = "", content = "";
+    const fr = (k, v) =>
+        `<div class="cas-field"><div class="cas-field-key">${esc(k)}</div>` +
+        `<div class="cas-field-val">${esc(v)}</div></div>`;
+    const area = (label, cls, value) =>
+        `<div class="cas-content-label">${esc(label)}</div>` +
+        `<textarea class="cas-content-box ${cls}">${esc(value)}</textarea>`;
+
+    if (p.action === "record") {
+        title = t.card_record_title; icon = "📝";
+        const pr = p.params;
+        fields = fr(t.card_club, pr.club_display || pr.club) + fr(t.card_date, pr.date) + fr(t.card_theme, pr.theme) +
+                 fr(t.card_hours, `${pr.c_hours} / ${pr.a_hours} / ${pr.s_hours}`);
+        content = area(t.card_description, "cas-desc", p.content.description);
+    } else if (p.action === "reflection") {
+        title = t.card_reflection_title; icon = "💭";
+        const pr = p.params;
+        fields = fr(t.card_club, pr.club_display || pr.club);
+        // All outcomes listed; the ones the model picked are pre-ticked, the rest
+        // empty, so the user can adjust before approving.
+        const picked = new Set(pr.outcomes || []);
+        content += `<div class="cas-content-label">${esc(t.card_outcomes)}</div><div class="cas-outcomes">`;
+        ALL_OUTCOMES.forEach((o) => {
+            content += `<label class="cas-outcome"><input type="checkbox" class="cas-outcome-cb" value="${esc(o)}"` +
+                       `${picked.has(o) ? " checked" : ""}> <span>${esc(o)}</span></label>`;
+        });
+        content += `</div>`;
+        (pr.titles || []).forEach((tt, i) => {
+            content += `<div class="cas-content-label">${esc(t.card_titles)} ${i + 1}: ${esc(tt)}</div>`;
+            content += `<textarea class="cas-content-box cas-refl-summary" data-i="${i}" rows="2">` +
+                       esc((p.content.summaries || [])[i] || "") + `</textarea>`;
+            content += `<textarea class="cas-content-box cas-refl-content" data-i="${i}">` +
+                       esc((p.content.contents || [])[i] || "") + `</textarea>`;
+        });
+    } else if (p.action === "batch") {
+        title = t.card_batch_title; icon = "🗓️";
+        const pr = p.params;
+        fields = fr(t.card_club, pr.club_display || pr.club) + fr(t.card_weekday, pr.weekday) +
+                 fr(t.card_range, `${pr.start_date} → ${pr.end_date}`) +
+                 fr(t.card_weeks, p.content.week_count) +
+                 (pr.periodic ? fr(t.card_periodic, pr.periodic) : "") +
+                 fr(t.card_hours, `${pr.c_hours} / ${pr.a_hours} / ${pr.s_hours}`);
+        content = `<div class="cas-content-label">${esc(t.card_sample)}: ${esc(p.content.sample_theme)}</div>` +
+                  `<div class="cas-content-box">${esc(p.content.sample_desc)}</div>` +
+                  `<div class="cas-card-status">${esc(t.card_batch_note)}</div>`;
+    }
+
+    card.innerHTML =
+        `<div class="cas-card-head"><span class="cas-card-icon">${icon}</span>` +
+        `<span>${esc(title)}</span>` +
+        `<span class="cas-card-badge">${esc(t.card_badge_review)}</span></div>` +
+        `<div class="cas-card-body">${fields}${content}</div>` +
+        `<div class="cas-card-actions">` +
+        `<button class="btn cas-btn-approve" onclick="approveCard('${id}')">${esc(t.card_approve)}</button>` +
+        `<button class="btn cas-btn-cancel" onclick="cancelCard('${id}')">${esc(t.card_cancel)}</button>` +
+        `</div>`;
+
+    container.appendChild(card);
+    // Auto-size content textareas: descriptions/reflections grow to 10 lines then
+    // scroll; short summaries cap at 4 lines.
+    card.querySelectorAll("textarea.cas-content-box").forEach((ta) => {
+        ta.dataset.maxlines = ta.classList.contains("cas-refl-summary") ? "4" : "10";
+        autoGrow(ta);
+        ta.addEventListener("input", () => autoGrow(ta));
+    });
+    container.scrollTop = container.scrollHeight;
+}
+
+function setCardBadge(card, text, klass) {
+    const badge = card.querySelector(".cas-card-badge");
+    if (badge) badge.textContent = text;
+    if (klass) card.classList.add(klass);
+}
+
+function approveCard(id) {
+    const p = cardProposals[id];
+    const card = document.getElementById(id);
+    if (!p || !card) return;
+    if (!CURRENT_USER || !CURRENT_PW) { alert(I18N[currentLang].card_need_login); return; }
+    const t = I18N[currentLang];
+    const acc = { username: CURRENT_USER, password: CURRENT_PW };
+
+    if (p.action === "record") {
+        const desc = card.querySelector(".cas-desc").value;
+        socket.emit("run_record", { ...acc, ...p.params, description: desc });
+        submittingCards.record.push(id);
+    } else if (p.action === "reflection") {
+        const outcomes = Array.from(card.querySelectorAll(".cas-outcome-cb:checked")).map((e) => e.value);
+        if (outcomes.length === 0) { alert(t.card_need_outcome); return; }
+        const summaries = Array.from(card.querySelectorAll(".cas-refl-summary")).map((e) => e.value);
+        const contents = Array.from(card.querySelectorAll(".cas-refl-content")).map((e) => e.value);
+        socket.emit("run_reflection", {
+            ...acc,
+            club: p.params.club,
+            club_desc: p.params.club_desc,
+            titles: p.params.titles,
+            desc_lines: p.params.desc_lines,
+            outcomes,
+            summaries,
+            contents,
+        });
+        submittingCards.reflection.push(id);
+    } else if (p.action === "batch") {
+        socket.emit("run_batch", { ...acc, ...p.params });
+        submittingCards.batch.push(id);
+    }
+
+    setButtonsRunning(true);
+    // Lock the card into a submitting state.
+    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    setCardBadge(card, t.card_badge_running, "is-running");
+    let status = card.querySelector(".cas-card-status");
+    if (!status) {
+        status = document.createElement("div");
+        status.className = "cas-card-status";
+        card.appendChild(status);
+    }
+    status.innerHTML = '<span class="spinner"></span>' + (t.card_submitting || "Submitting…");
+}
+
+function markCardDone(id) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const t = I18N[currentLang];
+    setCardBadge(card, t.card_badge_done, "is-done");
+    let status = card.querySelector(".cas-card-status");
+    if (!status) {
+        status = document.createElement("div");
+        status.className = "cas-card-status";
+        card.appendChild(status);
+    }
+    status.textContent = "✓ " + (t.card_done || "Submitted.");
+}
+
+function cancelCard(id) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const t = I18N[currentLang];
+    delete cardProposals[id];
+    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    setCardBadge(card, t.card_badge_cancelled, "is-cancelled");
+    let status = card.querySelector(".cas-card-status");
+    if (!status) {
+        status = document.createElement("div");
+        status.className = "cas-card-status";
+        card.appendChild(status);
+    }
+    status.textContent = t.card_cancelled_msg || "Cancelled.";
 }
