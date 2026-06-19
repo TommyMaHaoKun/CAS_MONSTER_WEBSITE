@@ -846,13 +846,7 @@ body:not(.logged-in) #lang-toggle { display: none; }
 .login-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
     margin-bottom: 6px;
-}
-.login-logo {
-    font-size: 26px;
-    color: var(--accent);
-    line-height: 1;
 }
 .login-title {
     font-size: 22px;
@@ -862,6 +856,12 @@ body:not(.logged-in) #lang-toggle { display: none; }
 .login-sub {
     font-size: 13px;
     color: var(--muted);
+    margin-bottom: 4px;
+}
+.login-powered {
+    font-size: 12px;
+    color: var(--accent-text);
+    font-weight: 600;
     margin-bottom: 20px;
 }
 .login-field { margin-bottom: 14px; }
