@@ -7,13 +7,46 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-card">
+            <div class="login-brand">
+                <span class="login-logo">✦</span>
+                <h1 class="login-title">CAS Monster</h1>
+            </div>
+            <p class="login-sub" data-i18n="login_sub">Sign in with your WFLA school account to begin.</p>
+            <div class="login-field">
+                <label class="login-label" for="username" data-i18n="username">Username</label>
+                <input type="text" id="username" class="form-input" data-i18n-ph="ph_username" placeholder="Login account" autocomplete="username">
+            </div>
+            <div class="login-field">
+                <label class="login-label" for="password" data-i18n="password">Password</label>
+                <input type="password" id="password" class="form-input" data-i18n-ph="ph_password" placeholder="Password" autocomplete="current-password"
+                       onkeydown="if(event.key==='Enter')doLogin()">
+            </div>
+            <label class="login-remember">
+                <input type="checkbox" id="remember-me"> <span data-i18n="remember_me">Remember me on this device</span>
+            </label>
+            <button id="btn-login" class="btn btn-accent login-btn-full" onclick="doLogin()" data-i18n="login_btn">Sign in</button>
+            <div id="login-error" class="login-error"></div>
+            <div class="login-foot">
+                <button class="lang-toggle" id="login-lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
+                <button class="theme-toggle" id="login-theme-toggle" title="Toggle dark mode" onclick="toggleTheme()">&#9790;</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Title Bar -->
     <header class="title-bar">
         <div class="title-inner">
-            <h1 class="app-title">CAS Autofill</h1>
+            <h1 class="app-title">CAS Monster</h1>
             <span class="app-subtitle">Records + Reflection + Weekly Batch</span>
-            <button class="lang-toggle" id="lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
-            <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" onclick="toggleTheme()">&#9790;</button>
+            <span class="header-actions">
+                <button class="lang-toggle" id="lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
+                <button class="btn btn-fetch" id="btn-refresh-clubs" title="Refresh clubs" onclick="fetchClubs()" data-i18n="refresh_clubs">Refresh clubs</button>
+                <button class="btn btn-cancel header-logout" id="btn-logout" onclick="doLogout()" data-i18n="logout_btn">Log out</button>
+                <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode" onclick="toggleTheme()">&#9790;</button>
+            </span>
         </div>
     </header>
     <div class="divider"></div>
@@ -30,38 +63,19 @@
         <div class="layout">
             <!-- Left Panel -->
             <div class="left-panel">
-                <h2 class="section-header" data-i18n="config">Configuration</h2>
-
-                <!-- Account Card -->
-                <div class="card">
-                    <div class="card-title" data-i18n="account">Account</div>
-                    <div class="form-row">
-                        <label class="form-label" data-i18n="username">Username</label>
-                        <input type="text" id="username" class="form-input" data-i18n-ph="ph_username" placeholder="Login account">
-                    </div>
-                    <div class="form-row">
-                        <label class="form-label" data-i18n="password">Password</label>
-                        <input type="password" id="password" class="form-input" data-i18n-ph="ph_password" placeholder="Password">
-                    </div>
-                    <div class="form-row">
-                        <label class="form-label"></label>
-                        <button id="btn-fetch-clubs" class="btn btn-fetch" onclick="fetchClubs()" data-i18n="fetch_clubs">Fetch clubs</button>
-                    </div>
-                </div>
-
                 <!-- Tabs -->
                 <div class="tabs">
                     <div class="tab-headers">
-                        <button class="tab-btn active" data-tab="tab-records" data-i18n="tab_records">Activity Records</button>
+                        <button class="tab-btn active" data-tab="tab-chat" data-i18n="tab_chat">CAS AI Chat</button>
+                        <button class="tab-btn" data-tab="tab-records" data-i18n="tab_records">Activity Records</button>
                         <button class="tab-btn" data-tab="tab-batch" data-i18n="tab_batch">Weekly Batch Records</button>
                         <button class="tab-btn" data-tab="tab-reflection" data-i18n="tab_reflection">Activity Reflection</button>
                         <button class="tab-btn" data-tab="tab-tutorial" data-i18n="tab_tutorial">Tutorial</button>
-                        <button class="tab-btn" data-tab="tab-chat" data-i18n="tab_chat">CAS AI Chat</button>
                         <button class="tab-btn" data-tab="tab-log" data-i18n="tab_log">Log</button>
                     </div>
 
                     <!-- Activity Records Tab -->
-                    <div class="tab-content active" id="tab-records">
+                    <div class="tab-content" id="tab-records">
                         <div class="card">
                             <div class="card-title" data-i18n="single_record">Single Record</div>
                             <div class="form-row">
@@ -145,7 +159,7 @@
                             </div>
                             <div class="form-row">
                                 <label class="form-label" data-i18n="theme_desc">Theme/Description</label>
-                                <span class="text-muted" data-i18n="auto_deepseek">Generated automatically by DeepSeek</span>
+                                <span class="text-muted" data-i18n="auto_deepseek">Generated automatically by Qwen</span>
                             </div>
                         </div>
                         <button id="btn-run-batch" class="btn btn-accent" onclick="runBatch()" data-i18n="run_batch">Run weekly batch</button>
@@ -219,7 +233,7 @@
                                 </div>
                                 <div class="tutorial-section">
                                     <h3 class="tutorial-heading" data-i18n="tut_step4_title">Step 4: Run</h3>
-                                    <p data-i18n="tut_step4">Click the Run button. The system will log in to the school system, generate content via DeepSeek AI, and fill in the forms automatically. Check the Log tab and Preview panel for progress and results.</p>
+                                    <p data-i18n="tut_step4">Click the Run button. The system will log in to the school system, generate content via Qwen AI, and fill in the forms automatically. Check the Log tab and Preview panel for progress and results.</p>
                                 </div>
                                 <div class="tutorial-section">
                                     <h3 class="tutorial-heading" data-i18n="tut_hours_title">CAS Hours</h3>
@@ -239,16 +253,63 @@
                     </div>
 
                     <!-- CAS AI Chat Tab -->
-                    <div class="tab-content" id="tab-chat">
+                    <div class="tab-content active" id="tab-chat">
                         <div class="chat-wrap">
                             <div class="chat-messages" id="chat-messages">
                                 <div class="chat-bubble assistant">
-                                    <div class="chat-bubble-inner" data-i18n="chat_welcome">Hello! I'm your IB CAS AI advisor. I've studied all the CAS documents. Ask me anything about CAS requirements, activities, or reflections!</div>
+                                    <div class="chat-bubble-inner" data-i18n="chat_welcome">Hello! I'm your IB CAS AI advisor. I can answer CAS questions AND fill in your records, reflections, or weekly batches for you. Just tell me what you need — I'll show you a card to approve before anything is submitted.</div>
                                 </div>
                             </div>
+                            <div class="chat-suggestions" id="chat-suggestions">
+                                <button class="chat-chip" data-i18n="chip_record" onclick="useSuggestion(this)">Log a drama club activity on 2026/03/05, theme 'rehearsal', C 2h</button>
+                                <button class="chat-chip" data-i18n="chip_reflection" onclick="useSuggestion(this)">Write a reflection for my service club on leadership</button>
+                                <button class="chat-chip" data-i18n="chip_help" onclick="useSuggestion(this)">What are the 7 CAS learning outcomes?</button>
+                            </div>
+                            <div class="chat-attachments" id="chat-attachments"></div>
                             <div class="chat-input-row">
-                                <input type="text" id="chat-input" class="form-input chat-input" data-i18n-ph="chat_placeholder" placeholder="Ask about IB CAS..." onkeydown="if(event.key==='Enter')sendChat()">
+                                <div class="chat-plus-wrap">
+                                    <button type="button" class="chat-plus-btn" id="chat-plus-btn" title="Add files or photos" onclick="toggleAttachMenu(event)">+</button>
+                                    <div class="chat-attach-menu" id="chat-attach-menu">
+                                        <button type="button" class="chat-attach-item" onclick="openQuickPanel('record')">
+                                            <span class="chat-attach-ico">+</span><span data-i18n="quick_add_record">Add Record</span>
+                                        </button>
+                                        <button type="button" class="chat-attach-item" onclick="openQuickPanel('reflection')">
+                                            <span class="chat-attach-ico">+</span><span data-i18n="quick_add_reflection">Add Reflection</span>
+                                        </button>
+                                        <button type="button" class="chat-attach-item" onclick="pickFiles()">
+                                            <span class="chat-attach-ico">📎</span><span data-i18n="attach_files">Add files or photos</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea id="chat-input" class="form-input chat-input" rows="1" data-i18n-ph="chat_placeholder" placeholder="Ask about IB CAS, or ask me to fill a form..." onkeydown="onChatKeydown(event)" oninput="autoGrowInput(this)"></textarea>
+                                <label class="chat-thinking-toggle" title="Toggle Qwen Thinking mode">
+                                    <input type="checkbox" id="chat-thinking-toggle" onchange="saveThinkingPreference()">
+                                    <span class="chat-thinking-switch"></span>
+                                    <span class="chat-thinking-text" data-i18n="thinking_toggle">Thinking</span>
+                                </label>
                                 <button class="btn btn-accent" id="btn-send-chat" onclick="sendChat()" data-i18n="chat_send">Send</button>
+                                <input type="file" id="chat-file-input" multiple hidden onchange="onFilesPicked(event)"
+                                       accept=".txt,.md,.csv,.log,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.webp,.bmp,.gif">
+                            </div>
+                            <div class="chat-foot-note" data-i18n="chat_disclaimer">CAS Monster uses AI and may make mistakes. Always review generated content before approving.</div>
+                        </div>
+                    </div>
+
+                    <div class="quick-modal-backdrop" id="quick-modal" aria-hidden="true">
+                        <div class="quick-modal" role="dialog" aria-modal="true" aria-labelledby="quick-modal-title">
+                            <div class="quick-modal-head">
+                                <button type="button" class="quick-icon-btn" id="quick-add-request" title="Add request" onclick="addQuickRequest()">+</button>
+                                <h3 id="quick-modal-title" class="quick-modal-title">Add Record</h3>
+                                <button type="button" class="quick-icon-btn quick-close-btn" title="Close" onclick="closeQuickPanel()">&times;</button>
+                            </div>
+                            <div class="quick-modal-body" id="quick-request-list"></div>
+                            <div class="quick-modal-foot">
+                                <label class="quick-thinking-toggle" title="Toggle Qwen Thinking mode">
+                                    <input type="checkbox" id="quick-thinking-toggle">
+                                    <span class="chat-thinking-switch"></span>
+                                    <span class="chat-thinking-text" data-i18n="thinking_toggle">Thinking</span>
+                                </label>
+                                <button type="button" class="btn quick-generate-btn" id="quick-generate-btn" onclick="submitQuickPanel()">Generate Cards</button>
                             </div>
                         </div>
                     </div>
@@ -290,7 +351,7 @@
         <!-- Footer -->
         <div class="divider-light footer-divider"></div>
         <footer class="app-footer">
-            <span class="text-muted">V5.0.0 Web | Powered by DeepSeek | Contact: <a href="mailto:nagasakisoyo090209@gmail.com" class="footer-link">nagasakisoyo090209@gmail.com</a> | <a href="https://github.com/TommyMaHaoKun/CAS_MONSTER_WEBSITE" target="_blank" rel="noopener noreferrer" class="footer-link github-link">⭐ Star it on GitHub!</a></span>
+            <span class="text-muted">V5.2.0 Web | Powered by Qwen (Alibaba Cloud Model Studio) | Contact: <a href="mailto:nagasakisoyo090209@gmail.com" class="footer-link">nagasakisoyo090209@gmail.com</a> | <a href="https://github.com/TommyMaHaoKun/CAS_MONSTER_WEBSITE" target="_blank" rel="noopener noreferrer" class="footer-link github-link">⭐ Star it on GitHub!</a></span>
         </footer>
     </main>
 
