@@ -114,6 +114,7 @@ SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USER or ISSUE_REPORT_EMAIL)
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() not in ("0", "false", "no")
+SMTP_TIMEOUT = float(os.environ.get("SMTP_TIMEOUT", "8"))
 QWEN_DEFAULT_CONTEXT_TOKENS = int(os.environ.get("QWEN_DEFAULT_CONTEXT_TOKENS", "1000000"))
 # Qwen docs describe 1M tokens as roughly 700k Chinese characters. Use a
 # character budget so chat history can use the model's default window without
@@ -1758,13 +1759,16 @@ def report_issue():
         msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=SMTP_TIMEOUT) as smtp:
             if SMTP_USE_TLS:
                 smtp.starttls()
             smtp.login(SMTP_USER, SMTP_PASSWORD)
             smtp.send_message(msg)
     except Exception as e:
-        return jsonify({"error": f"Could not send report: {sanitize_error(e)}"}), 500
+        detail = sanitize_error(e)
+        if "SmtpClientAuthentication is disabled" in detail:
+            detail = "Outlook refused SMTP login because SMTP AUTH is disabled for this mailbox. Enable SMTP AUTH for the mailbox or use another SMTP provider such as Gmail App Password."
+        return jsonify({"error": f"Could not send report: {detail}"}), 500
 
     return jsonify({"ok": True})
 
