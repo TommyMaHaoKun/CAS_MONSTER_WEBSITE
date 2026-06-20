@@ -99,6 +99,25 @@ const I18N = {
         login_btn: "Sign in",
         logout_btn: "Log out",
         refresh_clubs: "Refresh clubs",
+        report_issue: "Report an issue",
+        issue_title: "Report an issue",
+        issue_category: "Type",
+        issue_bug: "Bug",
+        issue_suggestion: "Suggestion",
+        issue_summary: "Summary",
+        issue_summary_ph: "Short summary",
+        issue_details: "Details",
+        issue_details_ph: "What happened? What did you expect?",
+        issue_contact: "Contact",
+        issue_contact_ph: "Optional email for follow-up",
+        issue_attachments: "Attachments",
+        issue_add_files: "Add attachments",
+        issue_send: "Send report",
+        issue_sending: "Sending report...",
+        issue_sent: "Report sent. Thank you.",
+        issue_required: "Please include a summary and details.",
+        issue_too_many: "You can attach up to 5 files.",
+        issue_file_too_large: "Each attachment must be 10 MB or smaller.",
         login_empty: "Please enter your username and password.",
         login_verifying: "Signing in…",
         login_saved_failed: "Saved login failed. Please sign in again.",
@@ -258,6 +277,25 @@ const I18N = {
         login_btn: "\u767B\u5F55",
         logout_btn: "\u9000\u51FA\u767B\u5F55",
         refresh_clubs: "\u5237\u65B0\u793E\u56E2",
+        report_issue: "\u62A5\u544A\u95EE\u9898",
+        issue_title: "\u62A5\u544A\u95EE\u9898",
+        issue_category: "\u7C7B\u578B",
+        issue_bug: "Bug",
+        issue_suggestion: "\u5EFA\u8BAE",
+        issue_summary: "\u6458\u8981",
+        issue_summary_ph: "\u7B80\u77ED\u6982\u62EC\u95EE\u9898\u6216\u5EFA\u8BAE",
+        issue_details: "\u8BE6\u60C5",
+        issue_details_ph: "\u53D1\u751F\u4E86\u4EC0\u4E48\uFF1F\u4F60\u671F\u671B\u7684\u7ED3\u679C\u662F\u4EC0\u4E48\uFF1F",
+        issue_contact: "\u8054\u7CFB\u65B9\u5F0F",
+        issue_contact_ph: "\u53EF\u9009\uFF1A\u7528\u4E8E\u56DE\u590D\u7684\u90AE\u7BB1",
+        issue_attachments: "\u9644\u4EF6",
+        issue_add_files: "\u6DFB\u52A0\u9644\u4EF6",
+        issue_send: "\u53D1\u9001\u62A5\u544A",
+        issue_sending: "\u6B63\u5728\u53D1\u9001...",
+        issue_sent: "\u62A5\u544A\u5DF2\u53D1\u9001\uFF0C\u8C22\u8C22\u3002",
+        issue_required: "\u8BF7\u586B\u5199\u6458\u8981\u548C\u8BE6\u60C5\u3002",
+        issue_too_many: "\u6700\u591A\u53EA\u80FD\u9644\u52A0 5 \u4E2A\u6587\u4EF6\u3002",
+        issue_file_too_large: "\u6BCF\u4E2A\u9644\u4EF6\u4E0D\u80FD\u8D85\u8FC7 10 MB\u3002",
         login_empty: "\u8BF7\u8F93\u5165\u7528\u6237\u540D\u548C\u5BC6\u7801\u3002",
         login_verifying: "\u767B\u5F55\u4E2D\u2026",
         login_saved_failed: "\u4FDD\u5B58\u7684\u767B\u5F55\u5931\u8D25\uFF0C\u8BF7\u91CD\u65B0\u767B\u5F55\u3002",
@@ -1478,7 +1516,10 @@ async function submitQuickPanel() {
 }
 
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeQuickPanel();
+    if (e.key === "Escape") {
+        closeQuickPanel();
+        closeIssueModal();
+    }
 });
 
 // ---- File attachments (uploaded to Qwen-Long file-extract via /api/upload) ----
@@ -1492,6 +1533,122 @@ function fileIcon(name) {
     if (ext === "docx") return "📄";
     if (["xlsx", "csv"].includes(ext)) return "📊";
     return "📄";
+}
+
+
+// ---- Issue reporting ----
+const ISSUE_MAX_FILES = 5;
+const ISSUE_MAX_FILE_BYTES = 10 * 1024 * 1024;
+let issueFiles = [];
+
+function setIssueStatus(message, kind = "") {
+    const status = document.getElementById("issue-status");
+    if (!status) return;
+    status.textContent = message || "";
+    status.className = "report-status" + (kind ? " is-" + kind : "");
+}
+
+function openIssueModal() {
+    const modal = document.getElementById("issue-modal");
+    if (!modal) return;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+    setIssueStatus("");
+    setTimeout(() => document.getElementById("issue-summary")?.focus(), 0);
+}
+
+function closeIssueModal() {
+    const modal = document.getElementById("issue-modal");
+    if (!modal) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function pickIssueFiles() {
+    document.getElementById("issue-file-input")?.click();
+}
+
+function formatBytes(bytes) {
+    if (!Number.isFinite(bytes)) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function renderIssueAttachments() {
+    const box = document.getElementById("issue-attachments");
+    if (!box) return;
+    box.innerHTML = "";
+    issueFiles.forEach((file, index) => {
+        const chip = document.createElement("div");
+        chip.className = "chat-chip-file quick-chip-file";
+        chip.innerHTML = `<span class="cf-ico">${fileIcon(file.name)}</span>` +
+            `<span class="cf-body"><span class="cf-name">${escapeHtml(file.name)}</span>` +
+            `<span class="cf-meta">${escapeHtml(formatBytes(file.size))}</span></span>` +
+            `<button class="cf-remove" type="button" title="Remove">x</button>`;
+        chip.querySelector(".cf-remove").addEventListener("click", () => {
+            issueFiles.splice(index, 1);
+            renderIssueAttachments();
+        });
+        box.appendChild(chip);
+    });
+}
+
+function onIssueFilesPicked(e) {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!selected.length) return;
+    const t = I18N[currentLang];
+    const room = ISSUE_MAX_FILES - issueFiles.length;
+    if (room <= 0) {
+        alert(t.issue_too_many || "You can attach up to 5 files.");
+        return;
+    }
+    if (selected.length > room) alert(t.issue_too_many || "You can attach up to 5 files.");
+    selected.slice(0, room).forEach((file) => {
+        if (file.size > ISSUE_MAX_FILE_BYTES) {
+            alert((t.issue_file_too_large || "Each attachment must be 10 MB or smaller.") + "\n" + file.name);
+            return;
+        }
+        issueFiles.push(file);
+    });
+    renderIssueAttachments();
+}
+
+async function submitIssueReport(e) {
+    e.preventDefault();
+    const t = I18N[currentLang];
+    const form = document.getElementById("issue-form");
+    const button = document.getElementById("issue-submit-btn");
+    const summary = document.getElementById("issue-summary")?.value.trim() || "";
+    const details = document.getElementById("issue-details")?.value.trim() || "";
+    if (!summary || !details) {
+        setIssueStatus(t.issue_required || "Please include a summary and details.", "error");
+        return;
+    }
+
+    const data = new FormData(form);
+    data.set("summary", summary);
+    data.set("details", details);
+    data.set("page_url", window.location.href);
+    data.set("user_agent", navigator.userAgent || "");
+    issueFiles.forEach((file) => data.append("attachments", file));
+
+    button.disabled = true;
+    setIssueStatus(t.issue_sending || "Sending report...");
+    try {
+        const resp = await fetch("/api/report_issue", { method: "POST", body: data });
+        const result = await resp.json();
+        if (!resp.ok || result.error) throw new Error(result.error || "Could not send report.");
+        form.reset();
+        issueFiles = [];
+        renderIssueAttachments();
+        setIssueStatus(t.issue_sent || "Report sent. Thank you.", "success");
+    } catch (err) {
+        setIssueStatus(err.message || "Could not send report.", "error");
+    } finally {
+        button.disabled = false;
+    }
 }
 
 function toggleAttachMenu(e) {

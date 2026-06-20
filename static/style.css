@@ -1650,3 +1650,92 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     .quick-outcomes { grid-template-columns: 1fr; }
     .quick-hours { flex-wrap: wrap; }
 }
+
+/* ---- GitHub and issue reporting ---- */
+.github-header-btn,
+.header-report-btn {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 7px 12px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.github-header-btn:hover,
+.header-report-btn:hover {
+    background: var(--hover);
+    border-color: var(--accent);
+    color: var(--accent-text);
+}
+.header-report-btn {
+    color: var(--accent);
+    border-color: var(--accent);
+}
+
+.report-modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: rgba(0, 0, 0, 0.38);
+    padding: 28px;
+    align-items: center;
+    justify-content: center;
+}
+.report-modal-backdrop.open { display: flex; }
+.report-modal {
+    width: min(680px, 100%);
+    max-height: min(720px, calc(100vh - 56px));
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 18px 48px var(--shadow-calendar);
+    overflow: hidden;
+}
+.report-modal-head {
+    display: grid;
+    grid-template-columns: 1fr 40px;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-light);
+}
+.report-modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+}
+.report-modal-body {
+    overflow-y: auto;
+    padding: 16px;
+}
+.report-status {
+    min-height: 18px;
+    margin-top: 6px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+}
+.report-status.is-error { color: var(--danger); }
+.report-status.is-success { color: var(--success); }
+
+@media (max-width: 720px) {
+    .title-inner { align-items: center; flex-wrap: wrap; padding: 10px 12px; }
+    .github-header-btn { order: 3; }
+    .header-actions { order: 4; width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+    .report-modal-backdrop { padding: 12px; align-items: stretch; }
+    .report-modal { max-height: calc(100vh - 24px); }
+}

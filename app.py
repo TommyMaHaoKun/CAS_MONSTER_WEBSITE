@@ -7,9 +7,13 @@ import io
 import re
 import time
 import json
+import mimetypes
 import secrets
+import smtplib
 import threading
 from collections import defaultdict
+from email.message import EmailMessage
+from email.utils import formatdate
 from datetime import date as dt_date, timedelta
 from typing import Optional
 
@@ -101,6 +105,15 @@ ALLOWED_UPLOAD_EXT = {"txt", "md", "csv", "log", "json",
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB/file
 MAX_UPLOAD_FILES = int(os.environ.get("MAX_UPLOAD_FILES", "5"))
 MAX_EXTRACT_CHARS = int(os.environ.get("MAX_EXTRACT_CHARS", "120000"))  # per file, sent to model
+ISSUE_REPORT_EMAIL = os.environ.get("ISSUE_REPORT_EMAIL", "nagasakisoyo090209@gmail.com")
+ISSUE_REPORT_MAX_FILES = int(os.environ.get("ISSUE_REPORT_MAX_FILES", "5"))
+ISSUE_REPORT_MAX_FILE_BYTES = int(os.environ.get("ISSUE_REPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", SMTP_USER or ISSUE_REPORT_EMAIL)
+SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() not in ("0", "false", "no")
 QWEN_DEFAULT_CONTEXT_TOKENS = int(os.environ.get("QWEN_DEFAULT_CONTEXT_TOKENS", "1000000"))
 # Qwen docs describe 1M tokens as roughly 700k Chinese characters. Use a
 # character budget so chat history can use the model's default window without
@@ -1688,6 +1701,72 @@ def font_file(filename):
     fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
     return send_from_directory(fonts_dir, filename)
 
+
+@app.route("/api/report_issue", methods=["POST"])
+def report_issue():
+    client_ip = request.remote_addr or "unknown"
+    if not _check_rate_limit(client_ip):
+        return jsonify({"error": "Rate limit exceeded. Please wait before submitting another report."}), 429
+
+    category = safe_str(request.form.get("category", "Bug"), 30) or "Bug"
+    if category not in ("Bug", "Suggestion"):
+        category = "Bug"
+    summary = safe_str(request.form.get("summary", ""), 140)
+    details = safe_str(request.form.get("details", ""), 5000)
+    contact = safe_str(request.form.get("contact", ""), 255)
+    page_url = safe_str(request.form.get("page_url", ""), 1000)
+    user_agent = safe_str(request.form.get("user_agent", ""), 1000)
+
+    if not summary or not details:
+        return jsonify({"error": "Please include a summary and details."}), 400
+    if not SMTP_USER or not SMTP_PASSWORD:
+        return jsonify({"error": "Issue email is not configured on the server. Set SMTP_USER and SMTP_PASSWORD."}), 500
+
+    files = request.files.getlist("attachments")
+    if len(files) > ISSUE_REPORT_MAX_FILES:
+        return jsonify({"error": f"Too many attachments (max {ISSUE_REPORT_MAX_FILES})."}), 400
+
+    msg = EmailMessage()
+    msg["Subject"] = f"[CAS Monster Issue] {category}: {summary[:80]}"
+    msg["From"] = SMTP_FROM
+    msg["To"] = ISSUE_REPORT_EMAIL
+    msg["Date"] = formatdate(localtime=True)
+    if contact and "@" in contact:
+        msg["Reply-To"] = contact
+
+    body = (
+        f"Category: {category}\n"
+        f"Summary: {summary}\n"
+        f"Contact: {contact or 'Not provided'}\n"
+        f"Page: {page_url or 'Not provided'}\n"
+        f"IP: {client_ip}\n"
+        f"Submitted: {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}\n"
+        f"User-Agent: {user_agent or 'Not provided'}\n\n"
+        f"Details:\n{details}\n"
+    )
+    msg.set_content(body)
+
+    for idx, f in enumerate(files, start=1):
+        filename = safe_str(os.path.basename(f.filename or f"attachment-{idx}"), 255) or f"attachment-{idx}"
+        data = f.read(ISSUE_REPORT_MAX_FILE_BYTES + 1)
+        if len(data) > ISSUE_REPORT_MAX_FILE_BYTES:
+            return jsonify({"error": f"Attachment '{filename}' is too large."}), 400
+        if not data:
+            continue
+        content_type = f.mimetype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        maintype, subtype = content_type.split("/", 1) if "/" in content_type else ("application", "octet-stream")
+        msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
+
+    try:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as smtp:
+            if SMTP_USE_TLS:
+                smtp.starttls()
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
+            smtp.send_message(msg)
+    except Exception as e:
+        return jsonify({"error": f"Could not send report: {sanitize_error(e)}"}), 500
+
+    return jsonify({"ok": True})
 
 @app.route("/api/upload", methods=["POST"])
 def upload_files():
