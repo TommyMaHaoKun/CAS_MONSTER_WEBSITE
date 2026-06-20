@@ -1154,6 +1154,14 @@ function useSuggestion(el) {
 
 // Auto-size a textarea to fit its content up to data-maxlines lines, then scroll.
 function autoGrow(el) {
+    // Modern browsers auto-size the textarea natively via CSS `field-sizing`
+    // (capped + scrolled by max-height in the stylesheet). Clear any inline
+    // height we may have set previously and let CSS own the sizing.
+    if (window.CSS && CSS.supports && CSS.supports("field-sizing", "content")) {
+        el.style.height = "";
+        el.style.overflowY = "";
+        return;
+    }
     const maxLines = parseInt(el.dataset.maxlines || "10", 10);
     const cs = getComputedStyle(el);
     let line = parseFloat(cs.lineHeight);

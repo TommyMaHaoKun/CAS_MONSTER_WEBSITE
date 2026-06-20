@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+    <!-- ===== Liquid Glass: ambient background scene (gives the glass something to refract) ===== -->
+    <div class="lg-bg" aria-hidden="true">
+        <span class="lg-blob lg-blob-1"></span>
+        <span class="lg-blob lg-blob-2"></span>
+        <span class="lg-blob lg-blob-3"></span>
+        <span class="lg-blob lg-blob-4"></span>
+        <span class="lg-grain"></span>
+    </div>
+
+    <!-- ===== Liquid Glass refraction is generated at runtime per element =====
+         liquid-glass.js builds a rounded-rect SDF displacement map on a canvas
+         and wires it through feImage -> feDisplacementMap (the shuding/liquid-glass
+         technique). The <defs> for those filters are injected into the page. -->
+
     <!-- Login Overlay -->
     <div id="login-overlay" class="login-overlay">
         <div class="login-card">
@@ -398,6 +412,7 @@
     </main>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/liquid-glass.js"></script>
     <script src="/static/script.js"></script>
 </body>
 </html>
