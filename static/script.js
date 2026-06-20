@@ -183,6 +183,8 @@ const I18N = {
         card_group_count: "{count} cards",
         card_group_expand: "Show {count} more",
         card_group_collapse: "Collapse",
+        card_group_approve_all: "Approve all",
+        card_group_cancel_all: "Cancel all",
     },
     zh: {
         config: "\u914D\u7F6E",
@@ -365,6 +367,8 @@ const I18N = {
         card_group_count: "{count} \u5F20\u5361\u7247",
         card_group_expand: "\u5C55\u5F00\u5269\u4F59 {count} \u5F20",
         card_group_collapse: "\u6536\u8D77",
+        card_group_approve_all: "\u5168\u90E8\u6279\u51C6",
+        card_group_cancel_all: "\u5168\u90E8\u53D6\u6D88",
     },
 };
 
@@ -1883,6 +1887,10 @@ function renderProposalGroup(proposals) {
         `<span>${esc(t.card_group_title || "Generated records")}</span>` +
         `<span class="cas-card-group-count">${esc(formatI18n(t.card_group_count || "{count} cards", { count: list.length }))}</span>` +
         `</div>` +
+        `<div class="cas-card-group-actions">` +
+        `<button type="button" class="btn cas-btn-approve cas-card-group-approve">${esc(t.card_group_approve_all || "Approve all")}</button>` +
+        `<button type="button" class="btn cas-btn-cancel cas-card-group-cancel">${esc(t.card_group_cancel_all || "Cancel all")}</button>` +
+        `</div>` +
         `<div class="cas-card-group-body" id="${bodyId}"></div>` +
         `<div class="cas-card-group-foot">` +
         `<button type="button" class="cas-card-group-toggle"></button>` +
@@ -1891,6 +1899,25 @@ function renderProposalGroup(proposals) {
 
     const body = group.querySelector(".cas-card-group-body");
     list.forEach((proposal) => renderProposalCard(proposal, body));
+
+    // Bulk approve / cancel for every still-pending card in this group. A card is
+    // pending until it starts submitting (is-running), succeeds (is-done) or is
+    // cancelled, so these filters keep us from re-acting on settled cards.
+    const actions = group.querySelector(".cas-card-group-actions");
+    const pendingCards = () => Array.from(body.querySelectorAll(".cas-card")).filter(
+        (c) => !c.classList.contains("is-running") &&
+               !c.classList.contains("is-done") &&
+               !c.classList.contains("is-cancelled"));
+    const refreshBulk = () => { actions.hidden = pendingCards().length === 0; };
+    group.querySelector(".cas-card-group-approve").addEventListener("click", () => {
+        if (!CURRENT_USER || !CURRENT_PW) { alert(I18N[currentLang].card_need_login); return; }
+        pendingCards().forEach((c) => approveCard(c.id));
+        refreshBulk();
+    });
+    group.querySelector(".cas-card-group-cancel").addEventListener("click", () => {
+        pendingCards().forEach((c) => cancelCard(c.id));
+        refreshBulk();
+    });
 
     const toggle = group.querySelector(".cas-card-group-toggle");
     const update = () => {
