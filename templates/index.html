@@ -40,8 +40,9 @@
     <header class="title-bar">
         <div class="title-inner">
             <h1 class="app-title">CAS Monster</h1>
-            <span class="app-subtitle">Records + Reflection + Weekly Batch</span>
+            <span class="app-subtitle">CAS AI + Log</span>
             <span class="header-actions">
+                <button class="version-toggle" id="version-toggle" title="Switch version" onclick="toggleVersionMode()">Old Version</button>
                 <button class="lang-toggle" id="lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
                 <button class="btn btn-fetch" id="btn-refresh-clubs" title="Refresh clubs" onclick="fetchClubs()" data-i18n="refresh_clubs">Refresh clubs</button>
                 <button class="btn btn-cancel header-logout" id="btn-logout" onclick="doLogout()" data-i18n="logout_btn">Log out</button>
@@ -66,11 +67,11 @@
                 <!-- Tabs -->
                 <div class="tabs">
                     <div class="tab-headers">
-                        <button class="tab-btn active" data-tab="tab-chat" data-i18n="tab_chat">CAS AI Chat</button>
-                        <button class="tab-btn" data-tab="tab-records" data-i18n="tab_records">Activity Records</button>
-                        <button class="tab-btn" data-tab="tab-batch" data-i18n="tab_batch">Weekly Batch Records</button>
-                        <button class="tab-btn" data-tab="tab-reflection" data-i18n="tab_reflection">Activity Reflection</button>
-                        <button class="tab-btn" data-tab="tab-tutorial" data-i18n="tab_tutorial">Tutorial</button>
+                        <button class="tab-btn active" data-tab="tab-chat" data-i18n="tab_chat">CAS AI</button>
+                        <button class="tab-btn old-version-only" data-tab="tab-records" data-i18n="tab_records">Activity Records</button>
+                        <button class="tab-btn old-version-only" data-tab="tab-batch" data-i18n="tab_batch">Weekly Batch Records</button>
+                        <button class="tab-btn old-version-only" data-tab="tab-reflection" data-i18n="tab_reflection">Activity Reflection</button>
+                        <button class="tab-btn old-version-only" data-tab="tab-tutorial" data-i18n="tab_tutorial">Tutorial</button>
                         <button class="tab-btn" data-tab="tab-log" data-i18n="tab_log">Log</button>
                     </div>
 

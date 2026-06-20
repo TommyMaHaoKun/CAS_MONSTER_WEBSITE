@@ -82,7 +82,11 @@ const I18N = {
         tut_tip2: "Check the Preview panel on the right to see generated content before it is submitted.",
         tut_tip3: "Use dark mode (toggle in top-right) for comfortable viewing at night.",
         tut_tip4: "For batch records, a more specific club description helps the AI generate better content.",
-        tab_chat: "CAS AI Chat",
+        tab_chat: "CAS AI",
+        old_version: "Old Version",
+        new_version: "New Version",
+        subtitle_new: "CAS AI + Log",
+        subtitle_old: "Records + Reflection + Weekly Batch",
         chat_welcome: "Hello! I'm your IB CAS AI advisor. I've studied all the CAS documents. Ask me anything about CAS requirements, activities, or reflections!",
         chat_placeholder: "Ask about IB CAS, or ask me to fill a form...",
         chat_send: "Send",
@@ -237,7 +241,11 @@ const I18N = {
         tut_tip2: "\u67E5\u770B\u53F3\u4FA7\u9884\u89C8\u9762\u677F\u4EE5\u5728\u63D0\u4EA4\u524D\u67E5\u770B\u751F\u6210\u7684\u5185\u5BB9\u3002",
         tut_tip3: "\u4F7F\u7528\u6DF1\u8272\u6A21\u5F0F\uFF08\u53F3\u4E0A\u89D2\u5207\u6362\uFF09\u4EE5\u83B7\u5F97\u66F4\u8212\u9002\u7684\u591C\u95F4\u89C2\u770B\u4F53\u9A8C\u3002",
         tut_tip4: "\u5BF9\u4E8E\u6279\u91CF\u8BB0\u5F55\uFF0C\u66F4\u5177\u4F53\u7684\u793E\u56E2\u63CF\u8FF0\u6709\u52A9\u4E8E AI \u751F\u6210\u66F4\u597D\u7684\u5185\u5BB9\u3002",
-        tab_chat: "AI\u52A9\u624B",
+        tab_chat: "CAS AI",
+        old_version: "\u65E7\u7248\u672C",
+        new_version: "\u65B0\u7248\u672C",
+        subtitle_new: "CAS AI + \u65E5\u5FD7",
+        subtitle_old: "\u8BB0\u5F55 + \u53CD\u601D + \u6BCF\u5468\u6279\u91CF",
         chat_welcome: "\u4F60\u597D\uFF01\u6211\u662F\u4F60\u7684 IB CAS AI \u987E\u95EE\uFF0C\u5DF2\u5B66\u4E60\u4E86\u6240\u6709CAS\u6587\u6863\u3002\u6709\u4EFB\u4F55\u5173\u4E8E CAS \u8981\u6C42\u3001\u6D3B\u52A8\u6216\u53CD\u601D\u7684\u95EE\u9898\u90FD\u53EF\u4EE5\u95EE\u6211\uFF01",
         chat_placeholder: "\u8BE2\u95EE CAS\uFF0C\u6216\u8BA9\u6211\u5E2E\u4F60\u586B\u5199\u8868\u5355\u2026",
         chat_send: "\u53D1\u9001",
@@ -316,6 +324,8 @@ const I18N = {
 
 let currentLang = localStorage.getItem("cas-lang") || "en";
 const THINKING_KEY = "cas-thinking-enabled";
+const VERSION_KEY = "cas-version-mode";
+const OLD_VERSION_TABS = ["tab-records", "tab-batch", "tab-reflection", "tab-tutorial"];
 
 function applyLang(lang) {
     currentLang = lang;
@@ -342,6 +352,7 @@ function applyLang(lang) {
         const key = el.getAttribute("data-i18n");
         if (t[key] !== undefined) el.innerHTML = t[key];
     });
+    syncVersionToggleText();
 }
 
 function toggleLang() {
@@ -364,6 +375,66 @@ function initThinkingPreference() {
     if (el) el.checked = localStorage.getItem(THINKING_KEY) === "1";
 }
 
+function currentVersionMode() {
+    return localStorage.getItem(VERSION_KEY) === "old" ? "old" : "new";
+}
+
+function syncVersionToggleText() {
+    const btn = document.getElementById("version-toggle");
+    const isOld = currentVersionMode() === "old";
+    if (btn) {
+        const key = isOld ? "new_version" : "old_version";
+        btn.textContent = I18N[currentLang][key] || (isOld ? "New Version" : "Old Version");
+        btn.setAttribute("aria-label", btn.textContent);
+    }
+    const subtitle = document.querySelector(".app-subtitle");
+    if (subtitle) {
+        const subtitleKey = isOld ? "subtitle_old" : "subtitle_new";
+        subtitle.textContent = I18N[currentLang][subtitleKey] || (isOld ? "Records + Reflection + Weekly Batch" : "CAS AI + Log");
+    }
+}
+
+function getActiveTabId() {
+    const active = document.querySelector(".tab-btn.active");
+    return active ? active.dataset.tab : "tab-chat";
+}
+
+function activateTab(tabId) {
+    const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+    const panel = document.getElementById(tabId);
+    if (!btn || !panel) return;
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+    btn.classList.add("active");
+    panel.classList.add("active");
+    updateChatMode();
+}
+
+function applyVersionMode(mode) {
+    const isOld = mode === "old";
+    document.body.classList.toggle("old-version", isOld);
+    document.body.classList.toggle("new-version", !isOld);
+    document.querySelectorAll(".old-version-only").forEach((el) => {
+        el.hidden = !isOld;
+    });
+    syncVersionToggleText();
+    if (!isOld && OLD_VERSION_TABS.includes(getActiveTabId())) {
+        activateTab("tab-chat");
+    } else {
+        updateChatMode();
+    }
+}
+
+function toggleVersionMode() {
+    const next = currentVersionMode() === "old" ? "new" : "old";
+    localStorage.setItem(VERSION_KEY, next);
+    applyVersionMode(next);
+}
+
+function initVersionMode() {
+    applyVersionMode(currentVersionMode());
+}
+
 // ---- Dark mode ----
 function applyTheme(theme) {
     document.documentElement.setAttribute("data-theme", theme);
@@ -382,6 +453,7 @@ function toggleTheme() {
 applyTheme(localStorage.getItem("cas-theme") || "light");
 applyLang(currentLang);
 initThinkingPreference();
+initVersionMode();
 
 const socket = io();
 
@@ -468,11 +540,7 @@ socket.on("task_done", (data) => {
 // ---- Tab switching ----
 document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-        document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
-        btn.classList.add("active");
-        document.getElementById(btn.dataset.tab).classList.add("active");
-        updateChatMode();
+        activateTab(btn.dataset.tab);
     });
 });
 
