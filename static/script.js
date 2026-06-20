@@ -1537,7 +1537,7 @@ function fileIcon(name) {
 
 
 // ---- Issue reporting ----
-const FORM_SUBMIT_ENDPOINT = "https://formsubmit.co/ajax/nagasakisoyo090209@gmail.com";
+const FORM_SUBMIT_ENDPOINT = "https://formsubmit.co/ajax/casmonster.report@outlook.com";
 const ISSUE_MAX_FILES = 5;
 const ISSUE_MAX_FILE_BYTES = 10 * 1024 * 1024;
 let issueFiles = [];
