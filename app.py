@@ -78,6 +78,9 @@ LLM_MODEL = os.environ.get("LLM_MODEL", "qwen3.6-flash")
 LLM_FALLBACK_MODEL = os.environ.get("LLM_FALLBACK_MODEL", "qwen3.7-plus")
 FILE_MODEL = os.environ.get("FILE_MODEL", "qwen-long")
 LLM_TEMPERATURE = float(os.environ.get("LLM_TEMPERATURE", "0.45"))
+# Output-token budget for a chat answer. Long CAS explanations were being cut off
+# mid-sentence at the old 800-token cap (finish_reason=length), so allow more room.
+CHAT_MAX_OUTPUT_TOKENS = int(os.environ.get("CHAT_MAX_OUTPUT_TOKENS", "2048"))
 CONVERSATION_CLUB = "谈话记录(Conversation)"
 # Prefer DashScope/Model Studio keys. Legacy env names stay as fallbacks only so
 # existing local setups do not break immediately.
@@ -2544,7 +2547,7 @@ def chat_cas():
         # otherwise spend the turn in reasoning_content and fail to emit a function
         # call, which leaves the user without an approval card.
         resp = llm_chat(LLM_API_KEY, LLM_MODEL, messages,
-                             temperature=0.3, max_tokens=800, tools=CAS_TOOLS, tool_choice="auto",
+                             temperature=0.3, max_tokens=CHAT_MAX_OUTPUT_TOKENS, tools=CAS_TOOLS, tool_choice="auto",
                              thinking_enabled=False)
         msg = resp["choices"][0]["message"]
         text = (msg.get("content") or "").strip()
@@ -2566,7 +2569,7 @@ def chat_cas():
 
         if not call and thinking_enabled:
             thinking_resp = llm_chat(LLM_API_KEY, LLM_MODEL, messages,
-                                     temperature=0.3, max_tokens=800,
+                                     temperature=0.3, max_tokens=CHAT_MAX_OUTPUT_TOKENS,
                                      thinking_enabled=True)
             thinking_msg = thinking_resp["choices"][0]["message"]
             text = (thinking_msg.get("content") or "").strip()
@@ -2670,8 +2673,10 @@ def _stream_chat(sid, data):
             return
 
         full, full_reason = [], []
+        # Thinking spends tokens on reasoning too, so give the answer extra headroom.
         for delta in llm_chat_stream(LLM_API_KEY, LLM_MODEL, messages,
-                                     temperature=0.3, max_tokens=900, thinking_enabled=True):
+                                     temperature=0.3, max_tokens=CHAT_MAX_OUTPUT_TOKENS + 1024,
+                                     thinking_enabled=True):
             rc = delta.get("reasoning_content") or ""
             if rc:
                 full_reason.append(rc)
@@ -2699,7 +2704,7 @@ def _stream_chat(sid, data):
     emitted = 0
     tool_state = {}
     for delta in llm_chat_stream(LLM_API_KEY, LLM_MODEL, messages,
-                                 temperature=0.3, max_tokens=800, tools=CAS_TOOLS,
+                                 temperature=0.3, max_tokens=CHAT_MAX_OUTPUT_TOKENS, tools=CAS_TOOLS,
                                  tool_choice="auto", thinking_enabled=False):
         _accumulate_tool_calls(tool_state, delta)
         c = delta.get("content") or ""
