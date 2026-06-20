@@ -1757,6 +1757,77 @@ def _spreadsheet_cell_text(value, header: str = "") -> str:
     return str(value).strip()
 
 
+def _is_number_like(value) -> bool:
+    try:
+        float(value)
+        return True
+    except Exception:
+        return False
+
+
+def _cas_hour_text(value) -> str:
+    if value in (None, ""):
+        return "0"
+    if isinstance(value, str) and not _is_number_like(value.strip()):
+        return "0"
+    try:
+        num = float(value)
+    except Exception:
+        return "0"
+    return str(int(num)) if num.is_integer() else str(num)
+
+
+def _detected_cas_activity_rows(rows: list) -> list[dict]:
+    """Detect WFLA CAS club activity-table rows with multi-line headers."""
+    if not rows:
+        return []
+    max_cols = max(len(r) for r in rows)
+    normalized = [list(r) + [""] * (max_cols - len(r)) for r in rows]
+
+    date_col = desc_col = None
+    header_idx = None
+    for ridx, row in enumerate(normalized):
+        labels = [_spreadsheet_cell_text(c) for c in row]
+        for i, label in enumerate(labels):
+            if date_col is None and re.search(r"\u6d3b\u52a8\u65e5\u671f|date", label, re.I):
+                date_col = i
+                header_idx = ridx
+            if desc_col is None and re.search(r"\u6d3b\u52a8\u5185\u5bb9|activity|description|content", label, re.I):
+                desc_col = i
+                header_idx = ridx
+        if date_col is not None and desc_col is not None:
+            break
+    if date_col is None or desc_col is None:
+        return []
+
+    strand_cols = {}
+    for ridx in range(header_idx, min(header_idx + 3, len(normalized))):
+        for i, cell in enumerate(normalized[ridx]):
+            label = _spreadsheet_cell_text(cell).strip().upper()
+            if label in ("C", "A", "S"):
+                strand_cols[label] = i
+    if not strand_cols:
+        return []
+
+    detected = []
+    for row in normalized[header_idx + 1:]:
+        date_raw = row[date_col] if date_col < len(row) else ""
+        activity = _spreadsheet_cell_text(row[desc_col] if desc_col < len(row) else "")
+        if not activity:
+            continue
+        date_text = _spreadsheet_cell_text(date_raw, "Date")
+        if not re.match(r"^\d{4}/\d{2}/\d{2}$", date_text):
+            continue
+        detected.append({
+            "date": date_text,
+            "activity": activity,
+            "c_hours": _cas_hour_text(row[strand_cols["C"]]) if "C" in strand_cols else "0",
+            "a_hours": _cas_hour_text(row[strand_cols["A"]]) if "A" in strand_cols else "0",
+            "s_hours": _cas_hour_text(row[strand_cols["S"]]) if "S" in strand_cols else "0",
+        })
+    return detected
+
+
 def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
     """Return readable table text from CSV/XLSX without relying on model parsing."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -1802,6 +1873,16 @@ def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
 
     blocks = []
     for sheet, rows in rows_by_sheet:
+        detected_rows = _detected_cas_activity_rows(rows)
+        if detected_rows:
+            blocks.append(f"[Detected CAS activity rows: {filename} / {sheet}]")
+            for idx, item in enumerate(detected_rows, start=1):
+                blocks.append(
+                    f"Activity Row {idx}: Date: {item['date']}; Activity: {item['activity']}; "
+                    f"C: {item['c_hours']}; A: {item['a_hours']}; S: {item['s_hours']}"
+                )
+            blocks.append("")
+
         max_cols = max(len(r) for r in rows)
         normalized = [r + [""] * (max_cols - len(r)) for r in rows]
         header = [_spreadsheet_cell_text(c) for c in normalized[0]]
@@ -2077,6 +2158,64 @@ def quick_attachment_context(raw_attachments) -> str:
     return "\n\n".join(blocks)
 
 
+RECORD_INTENT_RE = re.compile(
+    r"\b(record|records|log|fill|create|generate)\b|"
+    r"\u8bb0\u5f55|\u586b|\u751f\u6210|\u5199|record",
+    re.I,
+)
+DETECTED_ACTIVITY_RE = re.compile(
+    r"Activity Row\s+\d+:\s*Date:\s*([^;]+);\s*Activity:\s*([^;]+);\s*"
+    r"C:\s*([^;]+);\s*A:\s*([^;]+);\s*S:\s*([^\n;]+)",
+    re.I,
+)
+
+
+def _infer_club_for_activity(activity: str, clubs: list[str], context: str = "") -> str:
+    if not clubs:
+        return ""
+    combined = f"{context}\n{activity}"
+    for club in clubs:
+        if club and club in combined:
+            return club
+        eng = english_club_name(club)
+        if eng and re.search(re.escape(eng), combined, re.I):
+            return club
+
+    activity_l = activity.lower()
+    if any(token in activity_l for token in ("hema", "histor", "\u5b66\u672f\u6f14\u8bb2", "\u4f60\u753b\u6211\u731c", "\u6362\u5c4a")):
+        for club in clubs:
+            if "History Club" in club or "\u5386\u53f2" in club:
+                return club
+    return clubs[0] if len(clubs) == 1 else ""
+
+
+def table_record_args_from_attachments(user_message: str, attachments: list[tuple[str, str]], clubs: list[str]) -> Optional[dict]:
+    if not attachments or not RECORD_INTENT_RE.search(user_message or ""):
+        return None
+    context = _agent_context_text([], user_message, attachments)
+    records = []
+    for _name, text in attachments:
+        for match in DETECTED_ACTIVITY_RE.finditer(text or ""):
+            activity = safe_str(match.group(2), 500)
+            club = _infer_club_for_activity(activity, clubs, context)
+            if not club:
+                return None
+            records.append({
+                "club": club,
+                "date": safe_str(match.group(1), 20),
+                "theme": activity,
+                "activity_desc": activity,
+                "c_hours": _norm_hours(match.group(3)),
+                "a_hours": _norm_hours(match.group(4)),
+                "s_hours": _norm_hours(match.group(5)),
+            })
+            if len(records) >= 20:
+                break
+        if len(records) >= 20:
+            break
+    return {"records": records} if records else None
+
+
 @app.route("/api/quick_proposals", methods=["POST"])
 def quick_proposals():
     client_ip = request.remote_addr or "unknown"
@@ -2193,6 +2332,16 @@ def chat_cas():
     # Validate history is a list of dicts
     if not isinstance(history, list):
         history = []
+
+    table_args = table_record_args_from_attachments(user_message, attachments, clubs)
+    if table_args:
+        try:
+            proposals = build_bulk_record_proposals(table_args)
+            return jsonify({"proposals": proposals, "reply": ""})
+        except ValueError as ve:
+            return jsonify({"reply": f"I need a bit more info before I can do that: {ve}"})
+        except Exception as e:
+            return jsonify({"error": sanitize_error(e)}), 500
 
     today = dt_date.today().strftime("%Y/%m/%d")
     system_content = (
