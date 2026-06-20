@@ -1395,8 +1395,10 @@ DATE_HINT_RE = re.compile(
     re.I,
 )
 HOURS_HINT_RE = re.compile(
-    r"\b[CAS]\s*[:=]?\s*\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours)?\b|"
-    r"\b(?:creativity|activity|service)\s*(?:hours?)?\s*[:=]?\s*\d+(?:\.\d+)?\b|"
+    # Separators between the strand letter/word and the number may be a colon,
+    # equals, hyphen/dash or tilde (e.g. "C-2h", "A: 0", "service = 1", "S~2").
+    r"\b[CAS]\s*[-:=~–—]?\s*\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours)?\b|"
+    r"\b(?:creativity|activity|service)\s*(?:hours?)?\s*[-:=~–—]?\s*\d+(?:\.\d+)?\b|"
     r"\b\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours)\s*(?:of\s*)?(?:creativity|activity|service)\b|"
     r"[CAS]\s*\d+(?:\.\d+)?\s*\u5c0f\u65f6|"
     r"(?:\u521b\u9020|\u521b\u9020\u529b|\u6d3b\u52a8|\u670d\u52a1)\s*\d+(?:\.\d+)?\s*\u5c0f\u65f6",
@@ -1427,6 +1429,26 @@ def _agent_context_text(history, user_message: str, attachments=None) -> str:
 
 def _has_explicit_hours(context: str) -> bool:
     return bool(HOURS_HINT_RE.search(context or ""))
+
+
+def _has_positive_hours(*values) -> bool:
+    """True if the model parsed at least one strand to a positive number.
+
+    The LLM already does the natural-language understanding ("C is two hours",
+    "I need 3h for C", "C是两小时") when it fills the c/a/s_hours tool arguments,
+    so a positive value there is the most reliable signal that the user actually
+    specified hours — far more robust than pattern-matching the raw text. We
+    require > 0 (not merely "non-empty") so a model that lazily defaults every
+    strand to "0" still gets asked to confirm the real hours."""
+    for v in values:
+        if v is None:
+            continue
+        try:
+            if float(str(v).strip()) > 0:
+                return True
+        except (TypeError, ValueError):
+            continue
+    return False
 
 
 def _context_tokens(text: str) -> list:
@@ -1518,7 +1540,12 @@ def _missing_required_details(name: str, args: dict, history, user_message: str,
                     break
         if not DATE_HINT_RE.search(context):
             missing.append("date")
-        if not _has_explicit_hours(context):
+        row_hours = []
+        if isinstance(records, list):
+            for raw in records:
+                if isinstance(raw, dict):
+                    row_hours += [raw.get("c_hours"), raw.get("a_hours"), raw.get("s_hours")]
+        if not _has_explicit_hours(context) and not _has_positive_hours(*row_hours):
             missing.append("hours")
         return missing
 
@@ -1534,7 +1561,8 @@ def _missing_required_details(name: str, args: dict, history, user_message: str,
                           args.get("desc", ""), args.get("activity", ""), args.get("theme", "")]
         if not _has_supported_content(content_values, context, club):
             missing.append("activity_detail")
-        if not _has_explicit_hours(context):
+        if not _has_explicit_hours(context) and not _has_positive_hours(
+                args.get("c_hours"), args.get("a_hours"), args.get("s_hours")):
             missing.append("hours")
     elif name == "create_reflection":
         content_values = []
@@ -1552,7 +1580,8 @@ def _missing_required_details(name: str, args: dict, history, user_message: str,
         content_values = [args.get("club_desc", ""), args.get("periodic", "")]
         if not _has_supported_content(content_values, context, club):
             missing.append("batch_detail")
-        if not _has_explicit_hours(context):
+        if not _has_explicit_hours(context) and not _has_positive_hours(
+                args.get("c_hours"), args.get("a_hours"), args.get("s_hours")):
             missing.append("hours")
     return missing
 
@@ -2607,6 +2636,21 @@ def _emit_chat(sid, event, payload):
     socketio.emit(event, payload, to=sid)
 
 
+def _emit_text_stream(sid, text, reasoning=""):
+    """Reveal a server-composed reply progressively (word by word) so it eases in
+    left-to-right like the live model stream, instead of popping in as one block.
+    The client fades in each chunk; chat_done then finalises it to Markdown."""
+    text = (text or "").strip()
+    if not text:
+        _emit_chat(sid, "chat_done", {"reply": "", "reasoning": reasoning})
+        return
+    chunks = re.findall(r"\S+\s*", text) or [text]
+    for ch in chunks:
+        _emit_chat(sid, "chat_delta", {"text": ch})
+        socketio.sleep(0.015)
+    _emit_chat(sid, "chat_done", {"reply": text, "reasoning": reasoning})
+
+
 def _stream_chat(sid, data):
     ctx, err = _parse_chat_request(data)
     if err:
@@ -2650,8 +2694,9 @@ def _stream_chat(sid, data):
         else:  # reply (missing details / invalid / unknown function)
             if streamed_any:
                 _emit_chat(sid, "chat_clear", {})
-            _emit_chat(sid, "chat_reply", {"text": payload, "reasoning": reasoning})
-            _emit_chat(sid, "chat_done", {"reply": payload, "reasoning": reasoning})
+            # Stream the reply in so it reveals left-to-right like a live answer
+            # rather than appearing all at once and finalising instantly.
+            _emit_text_stream(sid, payload, reasoning)
 
     if thinking_enabled:
         # Route first (non-thinking, reliable tool detection), then stream the

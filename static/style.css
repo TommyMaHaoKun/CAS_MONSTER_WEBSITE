@@ -1876,3 +1876,765 @@ body.chat-active .cas-card-group { width: 100%; max-width: 100%; }
     .report-modal-backdrop { padding: 12px; align-items: stretch; }
     .report-modal { max-height: calc(100vh - 24px); }
 }
+
+/* ============================================================================
+   APPLE LIQUID GLASS UI  (iOS 26 / macOS Tahoe design language)
+   A faithful web re-creation: translucent glass material, edge refraction via
+   SVG displacement, specular rim highlights, depth shadows, fluid motion.
+   This section is appended last so it overrides the legacy Google-style rules.
+   ============================================================================ */
+
+:root {
+    /* Glass material ---------------------------------------------------- */
+    --glass-bg:          rgba(255, 255, 255, 0.42);
+    --glass-bg-strong:   rgba(255, 255, 255, 0.58);
+    --glass-bg-thin:     rgba(255, 255, 255, 0.28);
+    --glass-tint:        rgba(255, 255, 255, 0.12);
+    --glass-border:      rgba(255, 255, 255, 0.62);
+    --glass-blur:        16px;
+    --glass-saturate:    185%;
+    /* Specular lighting ------------------------------------------------- */
+    --glass-sheen:       rgba(255, 255, 255, 0.90);   /* top inner edge */
+    --glass-sheen-soft:  rgba(255, 255, 255, 0.45);
+    --glass-inner-line:  rgba(255, 255, 255, 0.35);
+    --glass-rim:         linear-gradient(135deg,
+                            rgba(255,255,255,0.95) 0%,
+                            rgba(255,255,255,0.25) 28%,
+                            rgba(255,255,255,0.04) 52%,
+                            rgba(255,255,255,0.30) 100%);
+    /* Depth shadows ----------------------------------------------------- */
+    --glass-shadow:      0 10px 34px rgba(20, 32, 86, 0.16), 0 2px 8px rgba(20, 32, 86, 0.10);
+    --glass-shadow-lg:   0 24px 70px rgba(20, 32, 86, 0.24), 0 6px 18px rgba(20, 32, 86, 0.14);
+    --glass-shadow-sm:   0 4px 16px rgba(20, 32, 86, 0.14);
+    /* Accent glass ------------------------------------------------------ */
+    --accent-glass:      linear-gradient(140deg, rgba(20, 110, 245, 0.95), rgba(8, 66, 175, 0.95));
+    --accent-glass-glow: 0 8px 22px rgba(11, 87, 208, 0.42);
+    --radius-lg: 22px;
+    --radius-md: 16px;
+    --radius-sm: 12px;
+}
+
+[data-theme="dark"] {
+    --glass-bg:          rgba(38, 40, 62, 0.46);
+    --glass-bg-strong:   rgba(40, 42, 66, 0.64);
+    --glass-bg-thin:     rgba(38, 40, 62, 0.30);
+    --glass-tint:        rgba(255, 255, 255, 0.05);
+    --glass-border:      rgba(255, 255, 255, 0.16);
+    --glass-sheen:       rgba(255, 255, 255, 0.26);
+    --glass-sheen-soft:  rgba(255, 255, 255, 0.12);
+    --glass-inner-line:  rgba(255, 255, 255, 0.10);
+    --glass-rim:         linear-gradient(135deg,
+                            rgba(255,255,255,0.40) 0%,
+                            rgba(255,255,255,0.08) 30%,
+                            rgba(255,255,255,0.02) 55%,
+                            rgba(255,255,255,0.14) 100%);
+    --glass-shadow:      0 10px 34px rgba(0, 0, 0, 0.46), 0 2px 8px rgba(0, 0, 0, 0.34);
+    --glass-shadow-lg:   0 26px 74px rgba(0, 0, 0, 0.60), 0 6px 18px rgba(0, 0, 0, 0.40);
+    --glass-shadow-sm:   0 4px 16px rgba(0, 0, 0, 0.40);
+    --accent-glass:      linear-gradient(140deg, rgba(86, 140, 255, 0.92), rgba(48, 96, 220, 0.92));
+    --accent-glass-glow: 0 8px 24px rgba(80, 130, 255, 0.40);
+}
+
+/* ---- Ambient background scene -------------------------------------------
+   A living gradient mesh with slowly drifting colour blobs. Glass surfaces
+   refract and tint this, which is what makes the material read as "liquid". */
+/* Light mode: clean soft canvas.  Dark mode: pure black (per request). */
+body {
+    background:
+        radial-gradient(1100px 700px at 12% -10%, rgba(120, 165, 255, 0.30), transparent 60%),
+        radial-gradient(1000px 720px at 100% 0%, rgba(180, 140, 255, 0.22), transparent 58%),
+        linear-gradient(160deg, #eef1f8 0%, #f4f2fb 50%, #f7f2f6 100%);
+    background-attachment: fixed;
+    color-scheme: light;
+}
+[data-theme="dark"] body,
+body[data-theme="dark"] {
+    background: #000000;
+    color-scheme: dark;
+}
+
+.lg-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    pointer-events: none;
+    display: none; /* solid black background — no ambient blobs */
+}
+.lg-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.55;
+    mix-blend-mode: screen;
+    will-change: transform;
+}
+[data-theme="dark"] .lg-blob { opacity: 0.40; }
+.lg-blob-1 { width: 46vw; height: 46vw; left: -8vw;  top: -10vw;  background: radial-gradient(circle, #5b8cff, transparent 70%); animation: lg-drift-1 26s ease-in-out infinite; }
+.lg-blob-2 { width: 40vw; height: 40vw; right: -10vw; top: -6vw;   background: radial-gradient(circle, #b07bff, transparent 70%); animation: lg-drift-2 32s ease-in-out infinite; }
+.lg-blob-3 { width: 50vw; height: 50vw; left: 12vw;  bottom: -22vw; background: radial-gradient(circle, #4fd8d0, transparent 70%); animation: lg-drift-3 30s ease-in-out infinite; }
+.lg-blob-4 { width: 34vw; height: 34vw; right: 4vw;  bottom: -14vw; background: radial-gradient(circle, #ff86b3, transparent 70%); animation: lg-drift-1 36s ease-in-out infinite reverse; }
+.lg-grain {
+    position: absolute;
+    inset: -50%;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    mix-blend-mode: overlay;
+}
+@keyframes lg-drift-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(6vw, 5vw) scale(1.12); } }
+@keyframes lg-drift-2 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-5vw, 6vw) scale(1.08); } }
+@keyframes lg-drift-3 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(4vw, -5vw) scale(1.14); } }
+@media (prefers-reduced-motion: reduce) {
+    .lg-blob { animation: none !important; }
+}
+
+/* ---- Core glass material -------------------------------------------------
+   .lg              -> the material (translucent fill + blur + saturate)
+   .lg::before      -> specular rim (gradient 1px border that catches light)
+   .lg-refract::after -> backdrop refraction layer (Chromium; degrades cleanly) */
+.lg {
+    position: relative;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-border);
+    box-shadow:
+        inset 0 1px 0 0 var(--glass-sheen),
+        inset 0 0 0 1px var(--glass-tint),
+        inset 0 -12px 24px -16px rgba(0,0,0,0.18),
+        var(--glass-shadow);
+    isolation: isolate;
+}
+.lg > * { position: relative; z-index: 1; }
+.lg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--glass-rim);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0.9;
+}
+/* Backdrop refraction is applied per-element by liquid-glass.js (SDF
+   displacement map). CSS only provides the blur/saturate fallback. */
+
+/* ---- Shared glass surface for the major panels/cards/popovers ----------- */
+.title-bar,
+.right-panel,
+.card,
+.login-card,
+.quick-modal,
+.report-modal,
+.cas-card,
+.cas-card-group,
+.chat-input-box,
+.chat-attach-menu,
+.cal-dropdown,
+.disclaimer {
+    position: relative;
+    isolation: isolate;
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+            backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+/* Specular gradient rim (1px) that catches the light, brightest top-left */
+.title-bar::before,
+.right-panel::before,
+.card::before,
+.login-card::before,
+.quick-modal::before,
+.report-modal::before,
+.cas-card::before,
+.cas-card-group::before,
+.chat-input-box::before,
+.chat-attach-menu::before,
+.cal-dropdown::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--glass-rim);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+    z-index: 3;
+    opacity: 0.9;
+}
+/* (Backdrop refraction is attached per element by liquid-glass.js.) */
+
+/* ---- Floating title bar (in-flow, so it never overlaps the tabs below) --- */
+.title-bar {
+    position: relative;
+    z-index: 1;
+    margin: 12px 16px 0;
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+}
+.title-bar + .divider { display: none; }
+.app-title {
+    background: linear-gradient(120deg, var(--accent), #6f8bff 60%, #9a7bff);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.01em;
+}
+
+/* ---- Disclaimer becomes a floating amber glass strip --------------------- */
+.disclaimer {
+    margin: 12px 16px 0;
+    border: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 246, 214, 0.45);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow-sm);
+}
+[data-theme="dark"] .disclaimer { background: rgba(60, 54, 30, 0.42); }
+
+/* ---- Panels & cards ------------------------------------------------------ */
+.right-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+}
+.card {
+    background: var(--glass-bg-thin);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+    transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s ease;
+}
+.card:hover {
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+}
+
+/* ---- Buttons: liquid glass capsules -------------------------------------- */
+.btn {
+    border-radius: 999px;
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, background 0.2s ease, filter 0.2s ease;
+    will-change: transform;
+}
+.btn:active:not(:disabled) { transform: scale(0.96); }
+
+/* Primary / accent button */
+.btn-accent,
+.quick-generate-btn,
+.cas-btn-approve,
+.btn-confirm {
+    background: var(--accent-glass);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.55),
+        inset 0 -8px 16px -10px rgba(0, 0, 0, 0.40),
+        var(--accent-glass-glow);
+    -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+}
+.btn-accent:hover:not(:disabled),
+.quick-generate-btn:hover:not(:disabled),
+.cas-btn-approve:hover:not(:disabled),
+.btn-confirm:hover:not(:disabled) {
+    background: var(--accent-glass);
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        var(--accent-glass-glow), 0 12px 30px rgba(11, 87, 208, 0.46);
+}
+.btn-confirm { background: linear-gradient(140deg, rgba(20, 160, 70, 0.95), rgba(12, 110, 48, 0.95)); box-shadow: inset 0 1px 0 rgba(255,255,255,0.5), 0 8px 22px rgba(20, 140, 70, 0.4); }
+.cas-btn-approve { background: linear-gradient(140deg, rgba(20, 160, 70, 0.95), rgba(12, 110, 48, 0.95)); }
+
+/* Neutral glass buttons (fetch, toggles, version, github, report, edit, etc.) */
+.btn-fetch,
+.theme-toggle,
+.lang-toggle,
+.version-toggle,
+.header-logout,
+.github-header-btn,
+.header-report-btn,
+.chat-plus-btn,
+.quick-icon-btn,
+.quick-file-btn,
+.cas-btn-edit,
+.cas-btn-cancel,
+.cas-card-group-toggle,
+.quick-trash-btn,
+.cal-nav-btn {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+            backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-fetch:hover:not(:disabled),
+.theme-toggle:hover,
+.lang-toggle:hover,
+.version-toggle:hover,
+.github-header-btn:hover,
+.header-report-btn:hover,
+.chat-plus-btn:hover,
+.quick-icon-btn:hover,
+.quick-file-btn:hover,
+.cas-btn-edit:hover:not(:disabled),
+.cas-card-group-toggle:hover,
+.cal-nav-btn:hover {
+    background: var(--glass-bg-strong);
+    filter: none;
+    transform: translateY(-1px);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+}
+.theme-toggle, .quick-icon-btn, .chat-plus-btn, .quick-trash-btn { border-radius: 50%; }
+.lang-toggle, .version-toggle, .btn-fetch, .github-header-btn, .header-report-btn { border-radius: 999px; }
+.header-logout { color: var(--danger); }
+.header-logout:hover:not(:disabled) { background: var(--danger-soft); }
+
+/* ---- Tabs become a Liquid Glass segmented control ------------------------ */
+.tab-headers,
+.preview-tab-headers {
+    gap: 4px;
+    border-bottom: none;
+    padding: 5px;
+    border-radius: 999px;
+    background: var(--glass-bg-thin);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+            backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), inset 0 -2px 6px rgba(0,0,0,0.06), var(--glass-shadow-sm);
+    flex-wrap: wrap;
+}
+.tab-btn,
+.preview-tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    color: var(--text-secondary);
+    transition: color 0.2s ease, background 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease;
+}
+.tab-btn:hover,
+.preview-tab-btn:hover { background: var(--glass-tint); color: var(--text); }
+.tab-btn.active,
+.preview-tab-btn.active {
+    background: var(--glass-bg-strong);
+    color: var(--accent);
+    border: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+    margin-bottom: 0;
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow-sm);
+}
+
+/* ---- Form fields: inset liquid glass ------------------------------------- */
+.form-input, .form-select, .form-textarea, .form-input-sm {
+    background: var(--glass-bg-thin);
+    -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06), inset 0 1px 0 var(--glass-sheen-soft);
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.form-input-sm { border-radius: 10px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus, .form-input-sm:focus {
+    border-color: rgba(120, 160, 255, 0.8);
+    background: var(--glass-bg);
+    box-shadow: 0 0 0 3px var(--accent-soft), inset 0 1px 0 var(--glass-sheen-soft);
+}
+
+/* ---- Log & preview boxes: subtle inset glass ----------------------------- */
+.log-box, .preview-box, .cas-content-box, .quick-request-card {
+    background: var(--glass-bg-thin);
+    -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), inset 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* ---- Outcome / checkbox rows -------------------------------------------- */
+.outcome-check:hover, .quick-outcome:hover, .cas-outcome:hover, .chat-attach-item:hover {
+    background: var(--glass-tint);
+}
+
+/* ---- Chat input capsule -------------------------------------------------- */
+.chat-input-box {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow);
+}
+.chat-input-box:focus-within {
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow), 0 0 0 3px var(--accent-soft);
+}
+
+/* ---- Chat bubbles -------------------------------------------------------- */
+.chat-bubble.assistant .chat-bubble-inner {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(14px) saturate(170%);
+            backdrop-filter: blur(14px) saturate(170%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+}
+.chat-bubble.user .chat-bubble-inner {
+    background: var(--accent-glass);
+    border: 1px solid rgba(255,255,255,0.3);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), var(--accent-glass-glow);
+}
+body.chat-active .chat-bubble.user .chat-bubble-inner {
+    background: var(--glass-bg-strong);
+    color: var(--text);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+            backdrop-filter: blur(14px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+}
+
+/* ---- Suggestion chips ---------------------------------------------------- */
+.chat-chip {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+            backdrop-filter: blur(12px) saturate(160%);
+    border: 1px solid var(--glass-border);
+    color: var(--accent-text);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+    transition: transform 0.18s cubic-bezier(0.22,1,0.36,1), box-shadow 0.2s ease;
+}
+.chat-chip:hover { filter: none; transform: translateY(-1px); box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow); }
+
+/* The fullscreen chat input row sits on the page bg — make it transparent so
+   the capsule floats over the ambient scene instead of a flat band. */
+body.chat-active .chat-input-row,
+body.chat-active .chat-foot-note { background: transparent; }
+body.chat-active #tab-chat.active { background: transparent; }
+
+/* ---- Modal & popover backdrops: frosted dim layer ------------------------ */
+.quick-modal-backdrop,
+.report-modal-backdrop {
+    background: rgba(18, 22, 40, 0.28);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+            backdrop-filter: blur(8px) saturate(120%);
+}
+.quick-modal, .report-modal {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow-lg);
+}
+.quick-modal-head, .report-modal-head,
+.quick-modal-foot {
+    background: transparent;
+    border-color: var(--glass-border);
+}
+
+/* ---- Popovers: attach menu & calendar ------------------------------------ */
+.chat-attach-menu, .cal-dropdown {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow-lg);
+}
+.cal-day.cal-allowed {
+    background: rgba(120, 160, 255, 0.22);
+    border-radius: 9px;
+}
+
+/* ---- Login gate ---------------------------------------------------------- */
+.login-overlay {
+    background:
+        radial-gradient(1000px 600px at 50% -10%, rgba(120, 160, 255, 0.40), transparent 60%),
+        radial-gradient(900px 700px at 100% 100%, rgba(180, 130, 255, 0.32), transparent 60%);
+    -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+}
+.login-card {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    border-radius: 26px;
+    box-shadow: inset 0 1px 0 var(--glass-sheen), var(--glass-shadow-lg);
+}
+.login-title {
+    background: linear-gradient(120deg, var(--accent), #6f8bff 55%, #9a7bff);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.login-foot { border-top-color: var(--glass-border); }
+
+/* ---- Approval cards (chat) ----------------------------------------------- */
+.cas-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow);
+}
+.cas-card-head {
+    background: linear-gradient(135deg, rgba(120, 160, 255, 0.28), rgba(255, 255, 255, 0.10));
+    border-bottom: 1px solid var(--glass-border);
+}
+.cas-card-head .cas-card-icon {
+    background: var(--glass-bg-strong);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+}
+.cas-card.is-done .cas-card-head { background: linear-gradient(135deg, rgba(40, 180, 90, 0.28), rgba(255,255,255,0.08)); }
+.cas-card.is-cancelled .cas-card-head { background: linear-gradient(135deg, rgba(220, 70, 60, 0.26), rgba(255,255,255,0.06)); }
+.cas-card-group {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow);
+}
+.cas-card-group-head,
+.cas-card-group-actions,
+.cas-card-group-foot { background: transparent; border-color: var(--glass-border); }
+.cas-card-group .cas-card { border-bottom: 1px solid var(--glass-border); }
+.cas-card-group .cas-card::before { display: none; }
+
+/* ---- Toggle switch knob gets a glassy sheen ------------------------------ */
+.chat-thinking-switch {
+    background: var(--glass-bg-thin);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+}
+.chat-thinking-switch::after {
+    background: linear-gradient(180deg, #ffffff, #e9edf6);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.chat-thinking-toggle input:checked + .chat-thinking-switch,
+.quick-thinking-toggle input:checked + .chat-thinking-switch {
+    background: var(--accent-glass);
+    border-color: rgba(255,255,255,0.3);
+}
+
+/* ---- File chips ---------------------------------------------------------- */
+.chat-chip-file, .quick-chip-file {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    box-shadow: inset 0 1px 0 var(--glass-sheen-soft), var(--glass-shadow-sm);
+}
+
+/* ---- Spinner picks up the accent ----------------------------------------- */
+.spinner { border-color: var(--accent-soft); border-top-color: var(--accent); }
+
+/* Respect users who reduce transparency (accessibility / performance) */
+@media (prefers-reduced-transparency: reduce) {
+    .lg, .title-bar, .right-panel, .card, .login-card, .quick-modal, .report-modal,
+    .cas-card, .cas-card-group, .chat-input-box, .chat-attach-menu, .cal-dropdown,
+    .chat-bubble.assistant .chat-bubble-inner {
+        -webkit-backdrop-filter: none;
+                backdrop-filter: none;
+        background: var(--surface);
+    }
+}
+
+/* ============================================================================
+   STYLE-REFERENCE TUNING — vibrant colour glass on a pure-black canvas
+   (matches the reference: glowing saturated tiles + a floating glass bottom bar)
+   ============================================================================ */
+
+/* On black, glass needs to read brighter and a touch more saturated. */
+:root {
+    --glass-bg:        rgba(255, 255, 255, 0.46);
+    --glass-bg-strong: rgba(255, 255, 255, 0.62);
+    --glass-bg-thin:   rgba(255, 255, 255, 0.30);
+    --glass-sheen:     rgba(255, 255, 255, 0.95);
+}
+[data-theme="dark"] {
+    --glass-bg:        rgba(58, 62, 92, 0.52);
+    --glass-bg-strong: rgba(64, 68, 100, 0.66);
+    --glass-bg-thin:   rgba(50, 54, 82, 0.44);
+    --glass-border:    rgba(255, 255, 255, 0.22);
+    --glass-sheen:     rgba(255, 255, 255, 0.36);
+    --glass-sheen-soft: rgba(255, 255, 255, 0.18);
+}
+
+/* Big, bold SF-style headings like the reference. */
+.app-title { font-size: 23px; font-weight: 800; letter-spacing: -0.02em; }
+.login-title { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.panel-header, .section-header { font-weight: 700; letter-spacing: -0.01em; }
+
+/* Floating glass surfaces glow softly above the black canvas. */
+.title-bar,
+.right-panel,
+.card,
+.cas-card,
+.cas-card-group,
+.quick-modal,
+.report-modal,
+.login-card,
+.chat-attach-menu,
+.cal-dropdown {
+    box-shadow:
+        inset 0 1px 0 var(--glass-sheen),
+        inset 0 0 0 1px var(--glass-tint),
+        0 14px 44px rgba(0, 0, 0, 0.55),
+        0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.card { transition: transform 0.28s cubic-bezier(0.22,1,0.36,1), box-shadow 0.28s ease; }
+.card:hover { transform: translateY(-2px); }
+
+/* ---- Vibrant, colour-coded approval cards (the "tiles") ------------------ */
+/* Single card defaults to a vivid blue; cards inside a weekly group rotate
+   through the reference palette (blue / orange / green / purple). */
+.cas-card { --c1: #2f7bff; --c2: #1b5ae0; }
+.cas-card-group .cas-card:nth-child(4n+1) { --c1: #2f86ff; --c2: #1b5fe0; }
+.cas-card-group .cas-card:nth-child(4n+2) { --c1: #f0902f; --c2: #d2611a; }
+.cas-card-group .cas-card:nth-child(4n+3) { --c1: #28bb60; --c2: #119544; }
+.cas-card-group .cas-card:nth-child(4n+4) { --c1: #a857e0; --c2: #7c30b4; }
+.cas-card .cas-card-head {
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.cas-card .cas-card-head .cas-card-icon {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.cas-card .cas-card-badge { background: rgba(255, 255, 255, 0.2); color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+/* Coloured halo around each card matching its accent. */
+.cas-card {
+    box-shadow:
+        inset 0 1px 0 var(--glass-sheen-soft),
+        0 14px 40px color-mix(in srgb, var(--c1) 34%, transparent),
+        0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.cas-card.is-done .cas-card-head { background: linear-gradient(135deg, #28bb60, #0f8a3e); }
+.cas-card.is-cancelled .cas-card-head { background: linear-gradient(135deg, #ff6b6b, #c23a3a); }
+.cas-card-group .cas-card { box-shadow: inset 0 1px 0 var(--glass-sheen-soft); }
+
+/* ---- Vibrant chat / form cards glow too --------------------------------- */
+.card {
+    background: linear-gradient(150deg,
+        color-mix(in srgb, var(--accent) 16%, var(--glass-bg-thin)),
+        var(--glass-bg-thin));
+}
+
+/* ---- The signature floating Liquid Glass bottom bar (chat input) --------- */
+.chat-input-box {
+    background: var(--glass-bg-strong);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+        inset 0 1px 0 var(--glass-sheen),
+        inset 0 -10px 22px -16px rgba(0,0,0,0.4),
+        0 16px 48px rgba(0, 0, 0, 0.6),
+        0 0 0 0.5px rgba(255, 255, 255, 0.08);
+}
+body.chat-active .chat-input-box {
+    box-shadow:
+        inset 0 1px 0 var(--glass-sheen),
+        0 18px 56px rgba(0, 0, 0, 0.66),
+        0 6px 22px color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.chat-input-box:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--glass-border));
+    box-shadow:
+        inset 0 1px 0 var(--glass-sheen),
+        0 18px 56px rgba(0, 0, 0, 0.66),
+        0 0 0 3px color-mix(in srgb, var(--accent) 32%, transparent),
+        0 6px 24px color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+/* Active tab pill: vivid accent fill like an iOS segmented control. */
+.tab-btn.active,
+.preview-tab-btn.active {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--accent) 26%, var(--glass-bg-strong)),
+        var(--glass-bg-strong));
+    color: var(--accent);
+}
+
+/* Accent (Send / primary) buttons get a brighter rim + glow on black. */
+.btn-accent,
+.quick-generate-btn {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 8px 22px rgba(20, 110, 245, 0.5),
+        0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+
+/* ============================================================================
+   FIXES: stray boxes, attach-menu layout & pop animation
+   ============================================================================ */
+
+/* (1)&(4) Kill any border / background / shadow / refraction on the chat
+   textarea itself and on assistant text bubbles, so no rectangle frames the
+   text. The glass lives on the *container*, not the text. */
+.chat-input-box textarea.chat-input,
+.chat-input-box .chat-input.form-input {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    outline: none !important;
+    -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+}
+/* Wrap long/unbroken text so the box grows vertically (line by line) instead of
+   scrolling sideways. */
+.chat-input-box .chat-input {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    overflow-x: hidden;
+    line-height: 1.5;
+    -webkit-appearance: none;
+            appearance: none;
+}
+/* Grow the textarea with its content up to 7 lines, then scroll. Chromium/Edge
+   support `field-sizing: content`, which auto-sizes the textarea natively and
+   reliably (the JS path is the fallback for browsers without it). */
+@supports (field-sizing: content) {
+    /* !important needed to beat `body.chat-active .chat-input { max-height: none;
+       overflow-y: hidden }`, which is more specific and would uncap the height. */
+    .chat-input-box .chat-input {
+        field-sizing: content;
+        max-height: calc(1.5em * 7 + 12px) !important;
+        overflow-y: auto !important;
+        height: auto !important;   /* defeat any stale inline height from JS */
+    }
+}
+body.chat-active .chat-bubble.assistant .chat-bubble-inner {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+}
+
+/* (2) The attach menu and calendar are popovers — they must stay absolutely
+   positioned (the shared glass rule had forced them to `relative`, which made
+   the menu push the input box open). Restore absolute + give a smooth pop. */
+.chat-attach-menu,
+.cal-dropdown {
+    position: absolute;
+}
+.chat-attach-menu {
+    display: block;                 /* animate via opacity/transform, not display */
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+    transform-origin: bottom left;
+    pointer-events: none;
+    transition:
+        opacity 0.18s ease,
+        transform 0.26s cubic-bezier(0.18, 1.3, 0.4, 1);
+    will-change: transform, opacity;
+}
+.chat-attach-menu.open {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+@media (prefers-reduced-motion: reduce) {
+    .chat-attach-menu { transition: opacity 0.12s ease; transform: none; }
+}
