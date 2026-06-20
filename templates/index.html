@@ -41,7 +41,9 @@
         <div class="title-inner">
             <h1 class="app-title">CAS Monster</h1>
             <span class="app-subtitle">CAS AI + Log</span>
+            <a class="github-header-btn" href="https://github.com/TommyMaHaoKun/CAS_MONSTER_WEBSITE" target="_blank" rel="noopener noreferrer" title="Open GitHub repository">GitHub</a>
             <span class="header-actions">
+                <button class="header-report-btn" id="report-issue-btn" type="button" onclick="openIssueModal()" data-i18n="report_issue">Report an issue</button>
                 <button class="version-toggle" id="version-toggle" title="Switch version" onclick="toggleVersionMode()">Old Version</button>
                 <button class="lang-toggle" id="lang-toggle" title="Switch language" onclick="toggleLang()">中文</button>
                 <button class="btn btn-fetch" id="btn-refresh-clubs" title="Refresh clubs" onclick="fetchClubs()" data-i18n="refresh_clubs">Refresh clubs</button>
@@ -315,6 +317,50 @@
                         </div>
                     </div>
 
+                    <div class="report-modal-backdrop" id="issue-modal" aria-hidden="true">
+                        <form class="report-modal" id="issue-form" role="dialog" aria-modal="true" aria-labelledby="issue-modal-title" onsubmit="submitIssueReport(event)">
+                            <div class="report-modal-head">
+                                <h3 id="issue-modal-title" class="report-modal-title" data-i18n="issue_title">Report an issue</h3>
+                                <button type="button" class="quick-icon-btn quick-close-btn" title="Close" onclick="closeIssueModal()">&times;</button>
+                            </div>
+                            <div class="report-modal-body">
+                                <div class="quick-form-row">
+                                    <label class="quick-label" for="issue-category" data-i18n="issue_category">Type</label>
+                                    <select id="issue-category" name="category" class="form-select">
+                                        <option value="Bug" data-i18n="issue_bug">Bug</option>
+                                        <option value="Suggestion" data-i18n="issue_suggestion">Suggestion</option>
+                                    </select>
+                                </div>
+                                <div class="quick-form-row">
+                                    <label class="quick-label" for="issue-summary" data-i18n="issue_summary">Summary</label>
+                                    <input type="text" id="issue-summary" name="summary" class="form-input" maxlength="140" data-i18n-ph="issue_summary_ph" placeholder="Short summary" required>
+                                </div>
+                                <div class="quick-form-row quick-notes-row">
+                                    <label class="quick-label" for="issue-details" data-i18n="issue_details">Details</label>
+                                    <textarea id="issue-details" name="details" class="form-input quick-description" rows="6" maxlength="5000" data-i18n-ph="issue_details_ph" placeholder="What happened? What did you expect?" required></textarea>
+                                </div>
+                                <div class="quick-form-row">
+                                    <label class="quick-label" for="issue-contact" data-i18n="issue_contact">Contact</label>
+                                    <input type="email" id="issue-contact" name="contact" class="form-input" data-i18n-ph="issue_contact_ph" placeholder="Optional email for follow-up">
+                                </div>
+                                <div class="quick-form-row quick-file-row">
+                                    <label class="quick-label" data-i18n="issue_attachments">Attachments</label>
+                                    <div class="quick-file-control">
+                                        <button type="button" class="quick-file-btn" onclick="pickIssueFiles()">
+                                            <span class="quick-file-icon">+</span><span data-i18n="issue_add_files">Add attachments</span>
+                                        </button>
+                                        <input type="file" id="issue-file-input" multiple hidden onchange="onIssueFilesPicked(event)">
+                                        <div class="quick-attachments" id="issue-attachments"></div>
+                                    </div>
+                                </div>
+                                <div class="report-status" id="issue-status" aria-live="polite"></div>
+                            </div>
+                            <div class="quick-modal-foot">
+                                <button type="button" class="btn cas-btn-cancel" onclick="closeIssueModal()" data-i18n="card_cancel">Cancel</button>
+                                <button type="submit" class="btn quick-generate-btn" id="issue-submit-btn" data-i18n="issue_send">Send report</button>
+                            </div>
+                        </form>
+                    </div>
                     <!-- Log Tab -->
                     <div class="tab-content" id="tab-log">
                         <div class="card-title" data-i18n="runtime_log">Runtime Log</div>
@@ -348,12 +394,6 @@
                 </div>
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="divider-light footer-divider"></div>
-        <footer class="app-footer">
-            <span class="text-muted">V5.2.0 Web | Powered by Qwen-3.6-flash | Contact: <a href="mailto:nagasakisoyo090209@gmail.com" class="footer-link">nagasakisoyo090209@gmail.com</a> | <a href="https://github.com/TommyMaHaoKun/CAS_MONSTER_WEBSITE" target="_blank" rel="noopener noreferrer" class="footer-link github-link">⭐ Star it on GitHub!</a></span>
-        </footer>
     </main>
 
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
