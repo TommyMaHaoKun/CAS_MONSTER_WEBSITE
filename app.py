@@ -296,30 +296,9 @@ def llm_chat(api_key: str, model: str, messages: list, temperature: float = 0.5,
              tool_choice: Optional[str] = None,
              thinking_enabled: Optional[bool] = None) -> dict:
     model_name = model or LLM_MODEL
-    thinking = thinking_payload_for_model(model_name, thinking_enabled)
-    effective_temperature = temperature
-    if not (model_name or "").lower().startswith("qwen"):
-        effective_temperature = LLM_TEMPERATURE
-    if thinking and thinking.get("type") == "disabled":
-        effective_temperature = 0.6
+    payload = _build_chat_payload(model_name, messages, temperature, max_tokens,
+                                  tools, tool_choice, thinking_enabled)
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    payload = {
-        "model": model_name,
-        "messages": clean_llm_messages(messages),
-        # Qwen accepts normal sampling temperatures; thinking is controlled per
-        # request with enable_thinking.
-        "temperature": effective_temperature,
-        "max_tokens": max_tokens,
-    }
-    if thinking:
-        if "qwen_enable_thinking" in thinking:
-            payload["enable_thinking"] = thinking["qwen_enable_thinking"]
-        else:
-            payload["thinking"] = thinking
-    if tools:
-        payload["tools"] = tools
-        if tool_choice:
-            payload["tool_choice"] = tool_choice
     r = requests.post(LLM_CHAT_ENDPOINT, headers=headers, json=payload, timeout=90)
     if r.status_code != 200:
         # Surface the provider's own error message (the API key lives in the header, not
@@ -338,6 +317,103 @@ def llm_chat(api_key: str, model: str, messages: list, temperature: float = 0.5,
             detail = (r.text or "")[:400]
         raise RuntimeError(f"Qwen API error HTTP {r.status_code}: {sanitize_error(RuntimeError(detail))}")
     return r.json()
+
+
+def _build_chat_payload(model_name, messages, temperature, max_tokens, tools,
+                        tool_choice, thinking_enabled):
+    """Assemble the request body shared by the blocking and streaming chat calls."""
+    thinking = thinking_payload_for_model(model_name, thinking_enabled)
+    effective_temperature = temperature
+    if not (model_name or "").lower().startswith("qwen"):
+        effective_temperature = LLM_TEMPERATURE
+    if thinking and thinking.get("type") == "disabled":
+        effective_temperature = 0.6
+    payload = {
+        "model": model_name,
+        "messages": clean_llm_messages(messages),
+        "temperature": effective_temperature,
+        "max_tokens": max_tokens,
+    }
+    if thinking:
+        if "qwen_enable_thinking" in thinking:
+            payload["enable_thinking"] = thinking["qwen_enable_thinking"]
+        else:
+            payload["thinking"] = thinking
+    if tools:
+        payload["tools"] = tools
+        if tool_choice:
+            payload["tool_choice"] = tool_choice
+    return payload
+
+
+def llm_chat_stream(api_key: str, model: str, messages: list, temperature: float = 0.5,
+                    max_tokens: int = 600, tools: Optional[list] = None,
+                    tool_choice: Optional[str] = None,
+                    thinking_enabled: Optional[bool] = None):
+    """Stream an OpenAI-compatible chat completion, yielding each `delta` dict.
+
+    Each yielded dict may carry `content`, `reasoning_content` (Qwen thinking),
+    and/or `tool_calls` fragments. The caller is responsible for accumulating
+    them. Qwen requires stream=True whenever enable_thinking is on, which is
+    always the case here.
+    """
+    model_name = model or LLM_MODEL
+    payload = _build_chat_payload(model_name, messages, temperature, max_tokens,
+                                  tools, tool_choice, thinking_enabled)
+    payload["stream"] = True
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    with requests.post(LLM_CHAT_ENDPOINT, headers=headers, json=payload,
+                       timeout=90, stream=True) as r:
+        if r.status_code != 200:
+            detail = ""
+            try:
+                detail = (r.text or "")[:400]
+            except Exception:
+                detail = ""
+            raise RuntimeError(f"Qwen API error HTTP {r.status_code}: {sanitize_error(RuntimeError(detail))}")
+        # Decode each complete line as UTF-8 (not iter_lines(decode_unicode=True),
+        # which can split a multibyte character across chunks and corrupt Chinese).
+        for raw in r.iter_lines():
+            if not raw:
+                continue
+            line = (raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else raw).strip()
+            if line.startswith("data:"):
+                line = line[5:].strip()
+            if not line or line == "[DONE]":
+                if line == "[DONE]":
+                    break
+                continue
+            try:
+                chunk = json.loads(line)
+            except Exception:
+                continue
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            delta = choices[0].get("delta") or {}
+            if delta:
+                yield delta
+
+
+def _accumulate_tool_calls(tool_state: dict, delta: dict):
+    """Merge streamed tool_call fragments (keyed by index) into tool_state."""
+    for tc in delta.get("tool_calls") or []:
+        idx = tc.get("index", 0)
+        st = tool_state.setdefault(idx, {"name": "", "arguments": ""})
+        fn = tc.get("function") or {}
+        if fn.get("name"):
+            st["name"] = fn["name"] if not st["name"] else st["name"] + fn["name"]
+        if fn.get("arguments"):
+            st["arguments"] += fn["arguments"]
+
+
+def _tool_state_to_call(tool_state: dict):
+    """Turn an accumulated tool_state into a tool_call dict, or None."""
+    for idx in sorted(tool_state.keys()):
+        st = tool_state[idx]
+        if st.get("name"):
+            return {"function": {"name": st["name"], "arguments": st.get("arguments") or "{}"}}
+    return None
 
 
 def llm_message_content(resp: dict) -> str:
@@ -2296,14 +2372,11 @@ def quick_proposals():
     return jsonify({"proposals": proposals})
 
 
-@app.route("/api/chat", methods=["POST"])
-def chat_cas():
-    # Rate limiting
-    client_ip = request.remote_addr or "unknown"
-    if not _check_rate_limit(client_ip):
-        return jsonify({"error": "Rate limit exceeded. Please wait before sending more messages."}), 429
+def _parse_chat_request(data: dict):
+    """Validate and normalise an incoming chat payload (shared by REST + socket).
 
-    data = request.json or {}
+    Returns (ctx, error) where ctx is a dict on success and error is a string.
+    """
     user_message = safe_str(data.get("message", ""), max_length=CHAT_MAX_MESSAGE_CHARS)
     history = data.get("history", [])
     thinking_enabled = bool(data.get("thinking", False))
@@ -2311,7 +2384,6 @@ def chat_cas():
     clubs = [safe_str(c, 200) for c in raw_clubs if isinstance(c, str) and c.strip()][:200] \
         if isinstance(raw_clubs, list) else []
 
-    # Attachments: text already extracted client-side via /api/upload (Qwen-Long file-extract).
     raw_attach = data.get("attachments", [])
     attachments = []
     if isinstance(raw_attach, list):
@@ -2323,26 +2395,24 @@ def chat_cas():
                     attachments.append((nm or "file", tx))
 
     if not user_message and not attachments:
-        return jsonify({"error": "Empty message"}), 400
+        return None, "Empty message"
     if not user_message:
         user_message = "Please read the attached file(s) and respond."
     if not LLM_API_KEY:
-        return jsonify({"error": "Qwen/DashScope API key not configured on server."}), 500
-
-    # Validate history is a list of dicts
+        return None, "Qwen/DashScope API key not configured on server."
     if not isinstance(history, list):
         history = []
+    return {
+        "user_message": user_message,
+        "history": history,
+        "thinking_enabled": thinking_enabled,
+        "clubs": clubs,
+        "attachments": attachments,
+    }, None
 
-    table_args = table_record_args_from_attachments(user_message, attachments, clubs)
-    if table_args:
-        try:
-            proposals = build_bulk_record_proposals(table_args)
-            return jsonify({"proposals": proposals, "reply": ""})
-        except ValueError as ve:
-            return jsonify({"reply": f"I need a bit more info before I can do that: {ve}"})
-        except Exception as e:
-            return jsonify({"error": sanitize_error(e)}), 500
 
+def _build_cas_messages(user_message: str, history: list, clubs: list, attachments: list) -> list:
+    """Build the full message list (system prompt + budgeted history + user turn)."""
     today = dt_date.today().strftime("%Y/%m/%d")
     system_content = (
         "You are an IB CAS (Creativity, Activity, Service) expert advisor AND autofill agent for "
@@ -2407,6 +2477,67 @@ def chat_cas():
     history_budget = max(0, CHAT_CONTEXT_CHAR_BUDGET - fixed_chars)
     messages.extend(_chat_history_messages_for_budget(history, history_budget))
     messages.append({"role": "user", "content": user_message})
+    return messages
+
+
+def _resolve_tool_call(call, text, reasoning, history, user_message, attachments, clubs):
+    """Turn a detected tool call into a result tuple for the client.
+
+    Returns one of:
+      ("proposal", proposal_dict, reasoning)
+      ("proposals", proposal_list, reasoning)
+      ("reply", text, reasoning)   # missing details / invalid args / unknown fn
+    """
+    fn = call.get("function", {}) or {}
+    name = fn.get("name", "")
+    builder = _PROPOSAL_BUILDERS.get(name)
+    if not builder:
+        return ("reply", text or "Sorry, I can't perform that action.", reasoning)
+    try:
+        args = json.loads(fn.get("arguments", "{}") or "{}")
+    except Exception:
+        args = {}
+    missing = _missing_required_details(name, args, history, user_message, attachments, clubs)
+    if missing:
+        return ("reply", _missing_followup(name, missing, user_message), reasoning)
+    try:
+        proposal = builder(args)
+    except ValueError as ve:
+        return ("reply", text or f"I need a bit more info before I can do that: {ve}", reasoning)
+    if isinstance(proposal, list):
+        return ("proposals", proposal, reasoning)
+    return ("proposal", proposal, reasoning)
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat_cas():
+    # Rate limiting
+    client_ip = request.remote_addr or "unknown"
+    if not _check_rate_limit(client_ip):
+        return jsonify({"error": "Rate limit exceeded. Please wait before sending more messages."}), 429
+
+    data = request.json or {}
+    ctx, err = _parse_chat_request(data)
+    if err:
+        status = 400 if err == "Empty message" else 500
+        return jsonify({"error": err}), status
+    user_message = ctx["user_message"]
+    history = ctx["history"]
+    thinking_enabled = ctx["thinking_enabled"]
+    clubs = ctx["clubs"]
+    attachments = ctx["attachments"]
+
+    table_args = table_record_args_from_attachments(user_message, attachments, clubs)
+    if table_args:
+        try:
+            proposals = build_bulk_record_proposals(table_args)
+            return jsonify({"proposals": proposals, "reply": ""})
+        except ValueError as ve:
+            return jsonify({"reply": f"I need a bit more info before I can do that: {ve}"})
+        except Exception as e:
+            return jsonify({"error": sanitize_error(e)}), 500
+
+    messages = _build_cas_messages(user_message, history, clubs, attachments)
 
     try:
         # Keep tool routing in non-thinking mode. Qwen mixed-thinking models can
@@ -2445,30 +2576,181 @@ def chat_cas():
                 text = ""
 
         if call:
-            fn = call.get("function", {}) or {}
-            name = fn.get("name", "")
-            builder = _PROPOSAL_BUILDERS.get(name)
-            if not builder:
-                return jsonify({"reply": text or "Sorry, I can't perform that action."})
-            try:
-                args = json.loads(fn.get("arguments", "{}") or "{}")
-            except Exception:
-                args = {}
-            missing = _missing_required_details(name, args, history, user_message, attachments, clubs)
-            if missing:
-                return jsonify({"reply": _missing_followup(name, missing, user_message)})
-            try:
-                proposal = builder(args)
-            except ValueError as ve:
-                # Missing/invalid params: turn into a friendly follow-up question.
-                return jsonify({"reply": text or f"I need a bit more info before I can do that: {ve}"})
-            if isinstance(proposal, list):
-                return jsonify({"proposals": proposal, "reply": text, "reasoning": reasoning})
-            return jsonify({"proposal": proposal, "reply": text, "reasoning": reasoning})
+            kind, payload, reasoning = _resolve_tool_call(
+                call, text, reasoning, history, user_message, attachments, clubs)
+            if kind == "proposals":
+                return jsonify({"proposals": payload, "reply": text, "reasoning": reasoning})
+            if kind == "proposal":
+                return jsonify({"proposal": payload, "reply": text, "reasoning": reasoning})
+            return jsonify({"reply": payload, "reasoning": reasoning})
 
         return jsonify({"reply": text, "reasoning": reasoning})
     except Exception as e:
         return jsonify({"error": sanitize_error(e)}), 500
+
+
+# --------------- Streaming chat over Socket.IO ---------------
+# The browser sends "chat_stream" and we push back incremental events so the
+# answer (and any thinking) renders live instead of arriving all at once:
+#   chat_reasoning {text}  – a chunk of the model's thinking
+#   chat_delta     {text}  – a chunk of the visible answer
+#   chat_clear     {}      – discard whatever answer text streamed so far
+#   chat_card      {proposal|proposals, reasoning} – show an approval card
+#   chat_reply     {text, reasoning} – a complete (non-streamed) reply
+#   chat_done      {reply, reasoning} – finished; client finalises + stores history
+#   chat_error     {error}
+
+def _emit_chat(sid, event, payload):
+    socketio.emit(event, payload, to=sid)
+
+
+def _stream_chat(sid, data):
+    ctx, err = _parse_chat_request(data)
+    if err:
+        _emit_chat(sid, "chat_error", {"error": err})
+        return
+    user_message = ctx["user_message"]
+    history = ctx["history"]
+    thinking_enabled = ctx["thinking_enabled"]
+    clubs = ctx["clubs"]
+    attachments = ctx["attachments"]
+
+    # Spreadsheet/table fast path: build the bulk cards directly, no model call.
+    table_args = table_record_args_from_attachments(user_message, attachments, clubs)
+    if table_args:
+        try:
+            proposals = build_bulk_record_proposals(table_args)
+            _emit_chat(sid, "chat_card", {"proposals": proposals, "reasoning": ""})
+        except ValueError as ve:
+            _emit_chat(sid, "chat_reply", {"text": f"I need a bit more info before I can do that: {ve}"})
+        except Exception as e:
+            _emit_chat(sid, "chat_error", {"error": sanitize_error(e)})
+            return
+        _emit_chat(sid, "chat_done", {"reply": "", "reasoning": ""})
+        return
+
+    messages = _build_cas_messages(user_message, history, clubs, attachments)
+
+    def finish_call(call, text, reasoning, streamed_any):
+        kind, payload, reasoning = _resolve_tool_call(
+            call, text, reasoning, history, user_message, attachments, clubs)
+        if kind == "proposals":
+            if streamed_any:
+                _emit_chat(sid, "chat_clear", {})
+            _emit_chat(sid, "chat_card", {"proposals": payload, "reasoning": reasoning})
+            _emit_chat(sid, "chat_done", {"reply": "", "reasoning": reasoning, "card": True})
+        elif kind == "proposal":
+            if streamed_any:
+                _emit_chat(sid, "chat_clear", {})
+            _emit_chat(sid, "chat_card", {"proposal": payload, "reasoning": reasoning})
+            _emit_chat(sid, "chat_done", {"reply": "", "reasoning": reasoning, "card": True})
+        else:  # reply (missing details / invalid / unknown function)
+            if streamed_any:
+                _emit_chat(sid, "chat_clear", {})
+            _emit_chat(sid, "chat_reply", {"text": payload, "reasoning": reasoning})
+            _emit_chat(sid, "chat_done", {"reply": payload, "reasoning": reasoning})
+
+    if thinking_enabled:
+        # Route first (non-thinking, reliable tool detection), then stream the
+        # thinking answer only if no function call is needed.
+        resp = llm_chat(LLM_API_KEY, LLM_MODEL, messages,
+                        temperature=0.3, max_tokens=800, tools=CAS_TOOLS,
+                        tool_choice="auto", thinking_enabled=False)
+        msg = resp["choices"][0]["message"]
+        text = (msg.get("content") or "").strip()
+        call = _first_tool_call(msg) or _tool_call_from_text(text)
+        if not call and clubs:
+            stalled = bool(_INTENT_EN.search(text) or _INTENT_ZH.search(text))
+            if stalled or not text:
+                forced = _force_tool_call(messages, text, thinking_enabled=False)
+                if forced:
+                    call = forced
+        if call:
+            finish_call(call, text, "", streamed_any=False)
+            return
+
+        full, full_reason = [], []
+        for delta in llm_chat_stream(LLM_API_KEY, LLM_MODEL, messages,
+                                     temperature=0.3, max_tokens=900, thinking_enabled=True):
+            rc = delta.get("reasoning_content") or ""
+            if rc:
+                full_reason.append(rc)
+                _emit_chat(sid, "chat_reasoning", {"text": rc})
+            c = delta.get("content") or ""
+            if c:
+                full.append(c)
+                _emit_chat(sid, "chat_delta", {"text": c})
+        answer = "".join(full).strip()
+        reasoning = "".join(full_reason).strip()
+        # The thinking answer occasionally is itself a printed tool-call JSON.
+        tcall = _tool_call_from_text(answer)
+        if tcall:
+            finish_call(tcall, "", reasoning, streamed_any=bool(answer))
+            return
+        _emit_chat(sid, "chat_done", {"reply": answer, "reasoning": reasoning})
+        return
+
+    # Non-thinking: stream the tool-routing call itself. Visible text is forwarded
+    # live; a leading "{" means the model is printing a tool-call JSON, so we hold
+    # it back instead of flashing raw JSON at the user.
+    full = ""
+    decided = False
+    suppress = False
+    emitted = 0
+    tool_state = {}
+    for delta in llm_chat_stream(LLM_API_KEY, LLM_MODEL, messages,
+                                 temperature=0.3, max_tokens=800, tools=CAS_TOOLS,
+                                 tool_choice="auto", thinking_enabled=False):
+        _accumulate_tool_calls(tool_state, delta)
+        c = delta.get("content") or ""
+        if not c:
+            continue
+        full += c
+        if not decided:
+            stripped = full.lstrip()
+            if not stripped:
+                continue
+            decided = True
+            suppress = stripped[0] == "{"
+        if not suppress:
+            _emit_chat(sid, "chat_delta", {"text": full[emitted:]})
+            emitted = len(full)
+
+    text = full.strip()
+    call = _tool_state_to_call(tool_state) or _tool_call_from_text(text)
+    if not call and clubs:
+        stalled = bool(_INTENT_EN.search(text) or _INTENT_ZH.search(text))
+        if stalled or not text:
+            forced = _force_tool_call(messages, text, thinking_enabled=False)
+            if forced:
+                call = forced
+    if call:
+        finish_call(call, "" if suppress else text, "", streamed_any=emitted > 0)
+        return
+
+    # No tool call: the streamed text is the answer. If we suppressed JSON-looking
+    # text that turned out not to be a call, surface it now so we never go silent.
+    if suppress and text:
+        _emit_chat(sid, "chat_reply", {"text": text, "reasoning": ""})
+    _emit_chat(sid, "chat_done", {"reply": text, "reasoning": ""})
+
+
+@socketio.on("chat_stream")
+def handle_chat_stream(data):
+    sid = request.sid
+    client_ip = request.remote_addr or "unknown"
+
+    def task():
+        if not _check_rate_limit(client_ip):
+            _emit_chat(sid, "chat_error",
+                       {"error": "Rate limit exceeded. Please wait before sending more messages."})
+            return
+        try:
+            _stream_chat(sid, data or {})
+        except Exception as e:
+            _emit_chat(sid, "chat_error", {"error": sanitize_error(e)})
+
+    threading.Thread(target=task, daemon=True).start()
 
 
 if __name__ == "__main__":

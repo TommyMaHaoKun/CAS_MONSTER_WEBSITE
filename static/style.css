@@ -919,6 +919,25 @@ body {
     opacity: 0.82;
 }
 
+/* ---- Streaming reveal ----
+   While a reply streams in, each chunk is wrapped in .stream-seg and eased from
+   dark/blurred to bright/sharp. Because chunks arrive left-to-right, every line
+   builds up left-to-right and brightens, instead of characters popping in. */
+.chat-bubble-inner.streaming {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.stream-seg {
+    animation: streamSegFade 0.55s ease both;
+}
+@keyframes streamSegFade {
+    from { opacity: 0; filter: blur(5px); }
+    to   { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .stream-seg { animation: none; }
+}
+
 /* ---- Login gate ---- */
 .login-overlay {
     position: fixed;
