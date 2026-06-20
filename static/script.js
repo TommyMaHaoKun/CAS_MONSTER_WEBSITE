@@ -535,6 +535,14 @@ socket.on("connect", () => {
 
 socket.on("disconnect", () => {
     appendLog("[System] Disconnected from server.");
+    // Don't leave the chat input frozen if a stream was mid-flight.
+    if (chatStream) {
+        if (chatStream.dotsBubble) { chatStream.dotsBubble.remove(); chatStream.dotsBubble = null; }
+        if (!chatStream.answerText && !chatStream.cardShown) {
+            appendChatBubble("assistant", "Network error: connection lost.");
+        }
+        endChatStream();
+    }
 });
 
 socket.on("log", (data) => {
@@ -1776,6 +1784,162 @@ async function onFilesPicked(e) {
     renderAttachments();
 }
 
+// ---- Streaming chat (Socket.IO) ----
+// While a reply streams in, chatStream holds the live DOM + accumulated text so
+// the socket event handlers can append incrementally and finalise at the end.
+let chatStream = null;
+
+function ensureStreamThinkingEl() {
+    const st = chatStream;
+    if (st.thinkingBody) return st.thinkingBody;
+    if (st.dotsBubble) { st.dotsBubble.remove(); st.dotsBubble = null; }
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = "chat-thinking-content";
+    div.innerHTML =
+        `<div class="chat-thinking-label">${escapeHtml(I18N[currentLang].thinking_label || "Thinking")}</div>` +
+        `<div class="chat-thinking-body streaming"></div>`;
+    container.appendChild(div);
+    st.thinkingEl = div;
+    st.thinkingBody = div.querySelector(".chat-thinking-body");
+    return st.thinkingBody;
+}
+
+function ensureStreamAnswerInner() {
+    const st = chatStream;
+    if (st.answerInner) return st.answerInner;
+    if (st.dotsBubble) { st.dotsBubble.remove(); st.dotsBubble = null; }
+    const container = document.getElementById("chat-messages");
+    const div = document.createElement("div");
+    div.className = "chat-bubble assistant";
+    const inner = document.createElement("div");
+    inner.className = "chat-bubble-inner markdown streaming";
+    div.appendChild(inner);
+    container.appendChild(div);
+    st.answerBubble = div;
+    st.answerInner = inner;
+    return inner;
+}
+
+// Append a streamed chunk wrapped in a fade-in span so text eases from dark to
+// bright instead of popping in character by character.
+function appendStreamSeg(target, text) {
+    if (!text) return;
+    const span = document.createElement("span");
+    span.className = "stream-seg";
+    span.textContent = text;
+    target.appendChild(span);
+    const c = document.getElementById("chat-messages");
+    if (c) c.scrollTop = c.scrollHeight;
+}
+
+function endChatStream() {
+    chatStream = null;
+    const btn = document.getElementById("btn-send-chat");
+    const input = document.getElementById("chat-input");
+    if (btn) btn.disabled = false;
+    if (input) { input.disabled = false; input.focus(); }
+}
+
+function finalizeChatStream(d) {
+    const st = chatStream;
+    if (!st || st.finalized) return;
+    st.finalized = true;
+    if (st.dotsBubble) { st.dotsBubble.remove(); st.dotsBubble = null; }
+    const reply = (st.answerText || "").trim();
+    if (st.answerInner) {
+        if (reply) {
+            // Swap the plain streamed segments for the final Markdown render.
+            st.answerInner.classList.remove("streaming");
+            st.answerInner.innerHTML = renderMarkdown(reply);
+        } else if (st.answerBubble) {
+            st.answerBubble.remove();
+            st.answerBubble = null;
+            st.answerInner = null;
+        }
+    }
+    if (st.thinkingBody) st.thinkingBody.classList.remove("streaming");
+    if (!st.cardShown) {
+        if (reply) {
+            chatHistory.push({ role: "assistant", content: reply, reasoning_content: st.reasoning || "" });
+        } else {
+            appendChatBubble("assistant", I18N[currentLang].chat_empty || "…");
+        }
+    }
+    if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory = chatHistory.slice(-CHAT_HISTORY_LIMIT);
+    endChatStream();
+}
+
+socket.on("chat_reasoning", (d) => {
+    if (!chatStream) return;
+    const body = ensureStreamThinkingEl();
+    chatStream.reasoning += (d && d.text) || "";
+    appendStreamSeg(body, (d && d.text) || "");
+});
+
+socket.on("chat_delta", (d) => {
+    if (!chatStream) return;
+    const inner = ensureStreamAnswerInner();
+    chatStream.answerText += (d && d.text) || "";
+    appendStreamSeg(inner, (d && d.text) || "");
+});
+
+socket.on("chat_clear", () => {
+    if (!chatStream || !chatStream.answerInner) return;
+    chatStream.answerText = "";
+    chatStream.answerInner.innerHTML = "";
+});
+
+socket.on("chat_reply", (d) => {
+    if (!chatStream) return;
+    const inner = ensureStreamAnswerInner();
+    chatStream.answerText = (d && d.text) || "";
+    inner.innerHTML = "";
+    appendStreamSeg(inner, chatStream.answerText);
+    if (d && d.reasoning) chatStream.reasoning = d.reasoning;
+});
+
+socket.on("chat_card", (d) => {
+    if (!chatStream) return;
+    // Drop an empty streamed answer bubble; keep it if the model also wrote text.
+    if (chatStream.answerBubble && !(chatStream.answerText || "").trim()) {
+        chatStream.answerBubble.remove();
+        chatStream.answerBubble = null;
+        chatStream.answerInner = null;
+    }
+    if (chatStream.dotsBubble) { chatStream.dotsBubble.remove(); chatStream.dotsBubble = null; }
+    const reasoning = (d && d.reasoning) || "";
+    if (d && d.proposal) {
+        renderProposalCard(d.proposal);
+        chatHistory.push({
+            role: "assistant",
+            content: "[Showed a " + d.proposal.action + " card for the user to approve.]",
+            reasoning_content: reasoning,
+        });
+        chatStream.cardShown = true;
+    } else if (d && d.proposals && d.proposals.length) {
+        renderProposalGroup(d.proposals);
+        chatHistory.push({
+            role: "assistant",
+            content: "[Showed " + d.proposals.length + " cards for the user to approve.]",
+            reasoning_content: reasoning,
+        });
+        chatStream.cardShown = true;
+    }
+});
+
+socket.on("chat_done", (d) => {
+    if (!chatStream) return;
+    finalizeChatStream(d || {});
+});
+
+socket.on("chat_error", (d) => {
+    if (!chatStream) return;
+    if (chatStream.dotsBubble) { chatStream.dotsBubble.remove(); chatStream.dotsBubble = null; }
+    appendChatBubble("assistant", "Error: " + ((d && d.error) || "unknown"));
+    endChatStream();
+});
+
 async function sendChat() {
     const input = document.getElementById("chat-input");
     const typed = input.value.trim();
@@ -1783,6 +1947,7 @@ async function sendChat() {
         .filter((a) => a.text && !a.loading)
         .map((a) => ({ name: a.name, text: a.text }));
     if (!typed && sentAttachments.length === 0) return;
+    if (chatStream) return; // a reply is still streaming in
 
     const t = I18N[currentLang];
     const message = typed || (t.attach_default || "Please read the attached file(s).");
@@ -1810,25 +1975,55 @@ async function sendChat() {
     const thinkingEnabled = isChatThinkingEnabled();
     const thinkingBubble = appendChatBubble("assistant thinking", t.chat_thinking || "Thinking...", true);
 
+    const cleanHistory = chatHistory.filter((h) =>
+        h && (h.role === "user" || h.role === "assistant") &&
+        typeof h.content === "string" && h.content.trim()
+    );
+    const requestBody = {
+        message,
+        history: cleanHistory,
+        clubs: availableClubs,
+        attachments: sentAttachments,
+        thinking: thinkingEnabled,
+    };
+
+    // Preferred path: stream the reply live over Socket.IO. The socket event
+    // handlers above own the rest of the flow (re-enabling the input on done).
+    if (socket && socket.connected) {
+        chatStream = {
+            userMessage: message,
+            thinkingEnabled,
+            dotsBubble: thinkingBubble,
+            thinkingEl: null,
+            thinkingBody: null,
+            reasoning: "",
+            answerBubble: null,
+            answerInner: null,
+            answerText: "",
+            cardShown: false,
+            finalized: false,
+        };
+        chatHistory.push({ role: "user", content: message });
+        socket.emit("chat_stream", requestBody);
+        return;
+    }
+
+    // Fallback when the socket is unavailable: original one-shot request.
+    await sendChatFallback(requestBody, thinkingEnabled, thinkingBubble);
+}
+
+async function sendChatFallback(requestBody, thinkingEnabled, thinkingBubble) {
+    const btn = document.getElementById("btn-send-chat");
+    const input = document.getElementById("chat-input");
     try {
-        const cleanHistory = chatHistory.filter((h) =>
-            h && (h.role === "user" || h.role === "assistant") &&
-            typeof h.content === "string" && h.content.trim()
-        );
         const resp = await fetch("/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                message,
-                history: cleanHistory,
-                clubs: availableClubs,
-                attachments: sentAttachments,
-                thinking: thinkingEnabled,
-            }),
+            body: JSON.stringify(requestBody),
         });
         const data = await resp.json();
         thinkingBubble.remove();
-        chatHistory.push({ role: "user", content: message });
+        chatHistory.push({ role: "user", content: requestBody.message });
         if (data.error) {
             appendChatBubble("assistant", "Error: " + data.error);
         } else {
