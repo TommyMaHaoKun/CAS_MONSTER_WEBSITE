@@ -7,6 +7,7 @@ import io
 import re
 import time
 import json
+import csv
 import mimetypes
 import secrets
 import smtplib
@@ -98,7 +99,8 @@ _rate_limit_lock = threading.Lock()
 
 PLAYWRIGHT_TIMEOUT_MS = int(os.environ.get("PLAYWRIGHT_TIMEOUT_MS", "120000"))  # 120s default
 
-# File upload limits. Text is extracted by Qwen-Long file-extract.
+# File upload limits. Spreadsheets are extracted locally first; other files use
+# Qwen-Long file-extract.
 ALLOWED_UPLOAD_EXT = {"txt", "md", "csv", "log", "json",
                       "docx", "pdf", "xlsx",
                       "jpg", "jpeg", "png", "webp", "bmp", "gif"}
@@ -1226,6 +1228,37 @@ CAS_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "create_bulk_activity_records",
+            "description": "Create MULTIPLE separate IB CAS activity records from a table, spreadsheet, pasted list, or multiple described events. Use one record per activity row; do not use this for recurring weekly date ranges.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "records": {
+                        "type": "array",
+                        "minItems": 1,
+                        "maxItems": 20,
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "club": {"type": "string", "description": "Club name. Must match one of the available clubs exactly."},
+                                "date": {"type": "string", "description": "Activity date in YYYY/MM/DD format."},
+                                "theme": {"type": "string", "description": "Short activity theme/title. May be inferred from the row description."},
+                                "activity_desc": {"type": "string", "description": "Concrete activity details from the row."},
+                                "c_hours": {"type": "string", "description": "Creativity hours, a number. Use 0 only if the row omits this CAS strand after giving other hours."},
+                                "a_hours": {"type": "string", "description": "Activity hours, a number. Use 0 only if the row omits this CAS strand after giving other hours."},
+                                "s_hours": {"type": "string", "description": "Service hours, a number. Use 0 only if the row omits this CAS strand after giving other hours."},
+                            },
+                            "required": ["club", "date", "activity_desc"],
+                        },
+                    },
+                },
+                "required": ["records"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "create_weekly_batch",
             "description": "Create MULTIPLE weekly IB CAS activity records across a date range (same weekday each week). Use when the user wants recurring weekly records over weeks/months.",
             "parameters": {
@@ -1391,6 +1424,25 @@ def _missing_required_details(name: str, args: dict, history, user_message: str,
         return ["loaded_clubs"]
 
     missing = []
+    if name == "create_bulk_activity_records":
+        records = args.get("records", [])
+        if not isinstance(records, list) or not records:
+            missing.append("activity_detail")
+        else:
+            for raw in records:
+                row_club = safe_str(raw.get("club", ""), 200) if isinstance(raw, dict) else ""
+                if not row_club:
+                    missing.append("club")
+                    break
+                if not _club_is_valid(row_club, clubs):
+                    missing.append("valid_club")
+                    break
+        if not DATE_HINT_RE.search(context):
+            missing.append("date")
+        if not _has_explicit_hours(context):
+            missing.append("hours")
+        return missing
+
     if not club:
         missing.append("club")
     elif not _club_is_valid(club, clubs):
@@ -1486,6 +1538,24 @@ def build_record_proposal(args: dict) -> dict:
     }
 
 
+def build_bulk_record_proposals(args: dict) -> list:
+    raw_records = args.get("records", [])
+    if not isinstance(raw_records, list) or not raw_records:
+        raise ValueError("At least one activity record is required.")
+    if len(raw_records) > 20:
+        raise ValueError("Maximum 20 records per chat proposal.")
+
+    proposals = []
+    for idx, raw in enumerate(raw_records, start=1):
+        if not isinstance(raw, dict):
+            raise ValueError(f"Record {idx} is invalid.")
+        record_args = dict(raw)
+        record_args["activity_desc"] = safe_str(record_args.get("activity_desc", ""), 2000)
+        record_args["thinking_enabled"] = bool(args.get("thinking_enabled", False))
+        proposals.append(build_record_proposal(record_args))
+    return proposals
+
+
 def build_reflection_proposal(args: dict) -> dict:
     thinking_enabled = bool(args.get("thinking_enabled", False))
     club = safe_str(args.get("club", ""), 200)
@@ -1570,6 +1640,7 @@ def build_batch_proposal(args: dict) -> dict:
 
 _PROPOSAL_BUILDERS = {
     "create_activity_record": build_record_proposal,
+    "create_bulk_activity_records": build_bulk_record_proposals,
     "create_weekly_batch": build_batch_proposal,
     "create_reflection": build_reflection_proposal,
 }
@@ -1622,6 +1693,80 @@ def _force_tool_call(base_messages: list, prior_text: str, thinking_enabled: Opt
 
 
 # --------------- File upload (Qwen-Long file-extract) ---------------
+
+def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
+    """Return readable table text from CSV/XLSX without relying on model parsing."""
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    rows_by_sheet = []
+    try:
+        if ext == "xlsx":
+            import openpyxl
+            wb = openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+            for ws in wb.worksheets:
+                rows = []
+                for row in ws.iter_rows(values_only=True):
+                    vals = ["" if c is None else str(c).strip() for c in row]
+                    if any(vals):
+                        rows.append(vals)
+                    if len(rows) >= 300:
+                        break
+                if rows:
+                    rows_by_sheet.append((ws.title, rows))
+        elif ext == "csv":
+            text = None
+            for enc in ("utf-8-sig", "utf-8", "gb18030", "latin-1"):
+                try:
+                    text = data.decode(enc)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            if text is None:
+                return {"text": "", "note": "Could not decode CSV.", "chars": 0, "truncated": False}
+            rows = []
+            for row in csv.reader(io.StringIO(text)):
+                vals = [str(c).strip() for c in row]
+                if any(vals):
+                    rows.append(vals)
+                if len(rows) >= 300:
+                    break
+            if rows:
+                rows_by_sheet.append(("CSV", rows))
+        else:
+            return {"text": "", "note": "Not a spreadsheet.", "chars": 0, "truncated": False}
+    except Exception as e:
+        return {"text": "", "note": f"Could not read spreadsheet locally: {sanitize_error(e)}",
+                "chars": 0, "truncated": False}
+
+    blocks = []
+    for sheet, rows in rows_by_sheet:
+        max_cols = max(len(r) for r in rows)
+        normalized = [r + [""] * (max_cols - len(r)) for r in rows]
+        header = normalized[0]
+        has_header = any(re.search(r"[A-Za-z\u4e00-\u9fff]", c or "") for c in header)
+        blocks.append(f"[Spreadsheet: {filename} / {sheet}]")
+        if has_header:
+            blocks.append("Columns: " + " | ".join(h or f"Column {i + 1}" for i, h in enumerate(header)))
+            data_rows = normalized[1:]
+        else:
+            data_rows = normalized
+        for ridx, row in enumerate(data_rows, start=1):
+            if has_header:
+                pairs = []
+                for i, cell in enumerate(row):
+                    if cell:
+                        key = header[i] if i < len(header) and header[i] else f"Column {i + 1}"
+                        pairs.append(f"{key}: {cell}")
+                if pairs:
+                    blocks.append(f"Row {ridx}: " + "; ".join(pairs))
+            else:
+                blocks.append(f"Row {ridx}: " + " | ".join(row))
+    text = "\n".join(blocks).strip()
+    truncated = len(text) > MAX_EXTRACT_CHARS
+    if truncated:
+        text = text[:MAX_EXTRACT_CHARS]
+    note = "Spreadsheet extracted locally." if text else "No non-empty spreadsheet rows found."
+    return {"text": text, "note": note, "chars": len(text), "truncated": truncated}
+
 
 def extract_file_via_qwen(filename: str, data: bytes) -> dict:
     """Upload a file to Qwen-Long and return extracted text.
@@ -1843,7 +1988,12 @@ def upload_files():
                             "note": f"File too large (max {MAX_UPLOAD_BYTES // (1024 * 1024)} MB).",
                             "chars": 0, "truncated": False})
             continue
-        info = extract_file_via_qwen(filename, data)
+        if ext in ("xlsx", "csv"):
+            info = extract_spreadsheet_locally(filename, data)
+            if not info.get("text"):
+                info = extract_file_via_qwen(filename, data)
+        else:
+            info = extract_file_via_qwen(filename, data)
         info["name"] = filename
         results.append(info)
     return jsonify({"files": results})
@@ -1990,6 +2140,10 @@ def chat_cas():
         "- For general questions, just answer in plain text. Be concise and supportive.\n"
         "- When the user asks to log/create/fill a record, reflection, or weekly batch and you have "
         "the required details, you MUST call the matching function IN THIS SAME TURN.\n"
+        "- If an attached spreadsheet/table/pasted list contains multiple activity rows, call "
+        "create_bulk_activity_records with one record per row. Map columns such as club, date, "
+        "activity/theme/description, and C/A/S hours. Use create_weekly_batch only for a recurring "
+        "weekly date range, not for independent table rows.\n"
         "- CRITICAL: Never announce that you will create something without calling the function. Do "
         "NOT reply with phrases like 'let me create the record', 'I'll create it now', or 'creating "
         "now'. If you are about to write such a sentence, call the function instead — the app shows "
@@ -2088,6 +2242,8 @@ def chat_cas():
             except ValueError as ve:
                 # Missing/invalid params: turn into a friendly follow-up question.
                 return jsonify({"reply": text or f"I need a bit more info before I can do that: {ve}"})
+            if isinstance(proposal, list):
+                return jsonify({"proposals": proposal, "reply": text, "reasoning": reasoning})
             return jsonify({"proposal": proposal, "reply": text, "reasoning": reasoning})
 
         return jsonify({"reply": text, "reasoning": reasoning})

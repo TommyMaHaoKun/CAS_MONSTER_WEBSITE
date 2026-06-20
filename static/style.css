@@ -1108,6 +1108,74 @@ textarea.cas-content-box { width: 100%; resize: vertical; min-height: 48px; max-
     font-size: 13px;
     color: var(--text-secondary);
 }
+.cas-card-group {
+    align-self: flex-start;
+    width: 96%;
+    max-width: 96%;
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    box-shadow: 0 4px 18px var(--shadow-calendar);
+    overflow: hidden;
+}
+.cas-card-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-light);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+}
+.cas-card-group-count {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+.cas-card-group-body {
+    display: flex;
+    flex-direction: column;
+}
+.cas-card-group .cas-card {
+    width: 100%;
+    max-width: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border-bottom: 1px solid var(--border-light);
+}
+.cas-card-group .cas-card:last-child {
+    border-bottom: 0;
+}
+.cas-card-group .cas-card-head {
+    border-radius: 0;
+}
+.cas-card.is-hidden-by-group {
+    display: none;
+}
+.cas-card-group-foot {
+    display: flex;
+    justify-content: center;
+    padding: 12px 18px 14px;
+    border-top: 1px solid var(--border-light);
+    background: var(--surface);
+}
+.cas-card-group-toggle {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--accent);
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.cas-card-group-toggle:hover {
+    background: var(--hover);
+}
 
 /* Fallback height when chat is not in fullscreen mode */
 .chat-wrap { height: 560px; }
@@ -1248,7 +1316,8 @@ body.chat-active .chat-chip {
 }
 
 /* ---- Redesigned approval card (more polished, larger) ---- */
-body.chat-active .cas-card { width: 100%; max-width: 100%; }
+body.chat-active .cas-card,
+body.chat-active .cas-card-group { width: 100%; max-width: 100%; }
 .cas-card {
     border-radius: 18px;
     border: 1px solid var(--border-light);
