@@ -285,6 +285,10 @@ body {
     border-bottom: 2px solid var(--accent);
     margin-bottom: -2px;
 }
+.new-version .old-version-only,
+.old-version-only[hidden] {
+    display: none;
+}
 .tab-content {
     display: none;
     padding: 12px 0;
@@ -833,7 +837,8 @@ body.logged-in .login-overlay { display: none; }
 body:not(.logged-in) #app-main,
 body:not(.logged-in) .disclaimer { display: none; }
 body:not(.logged-in) .header-actions .btn,
-body:not(.logged-in) #lang-toggle { display: none; }
+body:not(.logged-in) #lang-toggle,
+body:not(.logged-in) #version-toggle { display: none; }
 .login-card {
     width: 100%;
     max-width: 380px;
@@ -914,6 +919,23 @@ body:not(.logged-in) #lang-toggle { display: none; }
     gap: 8px;
 }
 .header-actions .btn { margin-top: 0; padding: 7px 14px; }
+.version-toggle {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    min-height: 36px;
+    padding: 7px 12px;
+    transition: background 0.15s, color 0.15s;
+}
+.version-toggle:hover {
+    background: var(--accent-soft);
+    color: var(--accent-text);
+}
 .header-logout { background: transparent; color: var(--danger); border: 1px solid var(--border); }
 .header-logout:hover:not(:disabled) { background: var(--danger-soft); filter: none; }
 
