@@ -179,6 +179,10 @@ const I18N = {
         quick_need_date: "Please select a date for every record.",
         quick_cards_ready: "Generated review cards. Please check them before submitting.",
         quick_attach: "Attach files or photos",
+        card_group_title: "Generated records",
+        card_group_count: "{count} cards",
+        card_group_expand: "Show {count} more",
+        card_group_collapse: "Collapse",
     },
     zh: {
         config: "\u914D\u7F6E",
@@ -357,6 +361,10 @@ const I18N = {
         quick_need_date: "\u8BF7\u4E3A\u6BCF\u6761\u8BB0\u5F55\u9009\u62E9\u65E5\u671F\u3002",
         quick_cards_ready: "\u5DF2\u751F\u6210\u5BA1\u6838\u5361\u7247\uFF0C\u8BF7\u68C0\u67E5\u540E\u518D\u63D0\u4EA4\u3002",
         quick_attach: "\u6DFB\u52A0\u6587\u4EF6\u6216\u7167\u7247",
+        card_group_title: "\u5DF2\u751F\u6210\u8BB0\u5F55",
+        card_group_count: "{count} \u5F20\u5361\u7247",
+        card_group_expand: "\u5C55\u5F00\u5269\u4F59 {count} \u5F20",
+        card_group_collapse: "\u6536\u8D77",
     },
 };
 
@@ -1504,7 +1512,7 @@ async function submitQuickPanel() {
         const data = await resp.json();
         if (!resp.ok || data.error) throw new Error(data.error || "Generation failed.");
         closeQuickPanel();
-        (data.proposals || []).forEach((proposal) => renderProposalCard(proposal));
+        renderProposalGroup(data.proposals || []);
         appendChatBubble("assistant", t.quick_cards_ready);
         hideChatSuggestions();
     } catch (err) {
@@ -1819,6 +1827,13 @@ async function sendChat() {
                     content: "[Showed a " + data.proposal.action + " card for the user to approve.]",
                     reasoning_content: data.reasoning || "",
                 });
+            } else if (data.proposals && data.proposals.length) {
+                renderProposalGroup(data.proposals);
+                chatHistory.push({
+                    role: "assistant",
+                    content: "[Showed " + data.proposals.length + " cards for the user to approve.]",
+                    reasoning_content: data.reasoning || "",
+                });
             } else if (!data.reply) {
                 appendChatBubble("assistant", I18N[currentLang].chat_empty || "…");
             }
@@ -1836,6 +1851,7 @@ async function sendChat() {
 
 // ---- Gemini-style approval cards ----
 let cardSeq = 0;
+let cardGroupSeq = 0;
 const cardProposals = {}; // id -> proposal
 const ALL_OUTCOMES = ["Awareness", "Challenge", "Initiative", "Collaboration",
                       "Commitment", "Global Value", "Ethics", "New Skills"];
@@ -1844,11 +1860,63 @@ function esc(s) {
     return escapeHtml(String(s == null ? "" : s));
 }
 
-function renderProposalCard(p) {
+function formatI18n(template, values) {
+    return String(template || "").replace(/\{(\w+)\}/g, (_, key) => values[key] == null ? "" : String(values[key]));
+}
+
+function renderProposalGroup(proposals) {
+    const list = (proposals || []).filter(Boolean);
+    if (list.length === 0) return;
+    if (list.length === 1) {
+        renderProposalCard(list[0]);
+        return;
+    }
+
+    const t = I18N[currentLang];
+    const container = document.getElementById("chat-messages");
+    const group = document.createElement("div");
+    const bodyId = "cas-card-group-body-" + (++cardGroupSeq);
+    group.className = "cas-card-group";
+    group.innerHTML =
+        `<div class="cas-card-group-head">` +
+        `<span>${esc(t.card_group_title || "Generated records")}</span>` +
+        `<span class="cas-card-group-count">${esc(formatI18n(t.card_group_count || "{count} cards", { count: list.length }))}</span>` +
+        `</div>` +
+        `<div class="cas-card-group-body" id="${bodyId}"></div>` +
+        `<div class="cas-card-group-foot">` +
+        `<button type="button" class="cas-card-group-toggle"></button>` +
+        `</div>`;
+    container.appendChild(group);
+
+    const body = group.querySelector(".cas-card-group-body");
+    list.forEach((proposal) => renderProposalCard(proposal, body));
+
+    const toggle = group.querySelector(".cas-card-group-toggle");
+    const update = () => {
+        const expanded = group.classList.contains("is-expanded");
+        body.querySelectorAll(".cas-card").forEach((card, i) => {
+            card.classList.toggle("is-hidden-by-group", !expanded && i >= 3);
+        });
+        const remaining = Math.max(0, list.length - 3);
+        toggle.textContent = expanded
+            ? (t.card_group_collapse || "Collapse")
+            : formatI18n(t.card_group_expand || "Show {count} more", { count: remaining });
+        group.querySelector(".cas-card-group-foot").hidden = remaining <= 0;
+    };
+    toggle.addEventListener("click", () => {
+        group.classList.toggle("is-expanded");
+        update();
+        container.scrollTop = container.scrollHeight;
+    });
+    update();
+    container.scrollTop = container.scrollHeight;
+}
+
+function renderProposalCard(p, targetContainer) {
     const t = I18N[currentLang];
     const id = "cas-card-" + (++cardSeq);
     cardProposals[id] = p;
-    const container = document.getElementById("chat-messages");
+    const container = targetContainer || document.getElementById("chat-messages");
     const card = document.createElement("div");
     card.className = "cas-card";
     card.id = id;
@@ -1918,7 +1986,8 @@ function renderProposalCard(p) {
         autoGrow(ta);
         ta.addEventListener("input", () => autoGrow(ta));
     });
-    container.scrollTop = container.scrollHeight;
+    const scroller = document.getElementById("chat-messages");
+    if (scroller) scroller.scrollTop = scroller.scrollHeight;
 }
 
 function setCardBadge(card, text, klass) {
