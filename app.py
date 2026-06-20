@@ -14,7 +14,7 @@ from datetime import date as dt_date, timedelta
 from typing import Optional
 
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 
 # --------------- CAS Knowledge Base ---------------
@@ -1495,6 +1495,12 @@ def extract_file_via_qwen(filename: str, data: bytes) -> dict:
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/fonts/<path:filename>")
+def font_file(filename):
+    fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+    return send_from_directory(fonts_dir, filename)
 
 
 @app.route("/api/upload", methods=["POST"])

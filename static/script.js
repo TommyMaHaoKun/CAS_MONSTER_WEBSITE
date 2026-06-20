@@ -329,6 +329,7 @@ const OLD_VERSION_TABS = ["tab-records", "tab-batch", "tab-reflection", "tab-tut
 
 function applyLang(lang) {
     currentLang = lang;
+    document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
     const t = I18N[lang];
     const langLabel = lang === "en" ? "\u4E2D\u6587" : "EN";
     document.querySelectorAll("#lang-toggle, #login-lang-toggle").forEach((b) => { b.textContent = langLabel; });

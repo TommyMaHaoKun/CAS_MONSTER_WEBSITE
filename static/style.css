@@ -1,4 +1,61 @@
 /* CAS Autofill Web - Google-inspired design matching the tkinter app */
+@font-face {
+    font-family: "SF Pro Text Local";
+    src: url("/fonts/SF-Pro-Text-Regular.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SF Pro Text Local";
+    src: url("/fonts/SF-Pro-Text-Medium.otf") format("opentype");
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SF Pro Text Local";
+    src: url("/fonts/SF-Pro-Text-Semibold.otf") format("opentype");
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+@font-face {
+    font-family: "SF Pro Text Local";
+    src: url("/fonts/SF-Pro-Text-Bold.otf") format("opentype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+@font-face {
+    font-family: "PingFang SC Local";
+    src: url("/fonts/PingFangSC-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+@font-face {
+    font-family: "PingFang SC Local";
+    src: url("/fonts/PingFangSC-Medium.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+}
+@font-face {
+    font-family: "PingFang SC Local";
+    src: url("/fonts/PingFangSC-Semibold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+}
+@font-face {
+    font-family: "PingFang SC Local";
+    src: url("/fonts/PingFangSC-Semibold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
 :root {
     --bg: #F0F4F9;
     --surface: #FFFFFF;
@@ -56,11 +113,14 @@
 }
 
 body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    font-size: 14px;
+    font-family: "SF Pro Text Local", "SF Pro Text", "PingFang SC Local", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
     color: var(--text);
     background: var(--bg);
     min-height: 100vh;
+}
+:lang(zh) body {
+    font-family: "PingFang SC Local", "PingFang SC", "SF Pro Text Local", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* Title Bar */
@@ -74,12 +134,12 @@ body {
     gap: 12px;
 }
 .app-title {
-    font-size: 20px;
+    font-size: 21px;
     font-weight: 600;
     color: var(--accent);
 }
 .app-subtitle {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--muted);
 }
 
@@ -119,13 +179,13 @@ body {
 }
 
 .section-header {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--text);
     margin-bottom: 8px;
 }
 .panel-header {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--text);
     margin-bottom: 4px;
@@ -140,7 +200,7 @@ body {
     margin-bottom: 10px;
 }
 .card-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 10px;
@@ -156,7 +216,7 @@ body {
 .form-label {
     width: 160px;
     min-width: 130px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-secondary);
     flex-shrink: 0;
@@ -166,7 +226,7 @@ body {
     padding: 7px 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     background: var(--surface);
     outline: none;
@@ -181,7 +241,7 @@ body {
     padding: 7px 8px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     background: var(--surface);
     outline: none;
@@ -196,7 +256,7 @@ body {
     padding: 7px 10px;
     border: 1px solid var(--border);
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     background: var(--surface);
     outline: none;
@@ -216,13 +276,13 @@ body {
 }
 .hours-group span {
     font-weight: 600;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
 }
 
 .text-muted {
     color: var(--muted);
-    font-size: 12px;
+    font-size: 13px;
 }
 
 /* Buttons */
@@ -230,7 +290,7 @@ body {
     padding: 8px 18px;
     border: none;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.15s;
@@ -270,7 +330,7 @@ body {
     background: var(--tab-bg);
     border: none;
     border-radius: 8px 8px 0 0;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
@@ -307,7 +367,7 @@ body {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     cursor: pointer;
     padding: 4px;
@@ -329,7 +389,7 @@ body {
     border-radius: 6px;
     padding: 10px;
     font-family: 'Cascadia Code', 'Consolas', monospace;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text);
     height: 400px;
     overflow-y: auto;
@@ -354,7 +414,7 @@ body {
     background: var(--tab-bg);
     border: none;
     border-radius: 6px 6px 0 0;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--muted);
     cursor: pointer;
@@ -379,7 +439,7 @@ body {
     display: flex;
 }
 .preview-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 4px;
@@ -389,7 +449,7 @@ body {
     border: 1px solid var(--border-light);
     border-radius: 6px;
     padding: 10px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     flex: 1;
     overflow-y: auto;
@@ -409,7 +469,7 @@ body {
     background: var(--disclaimer-bg);
     border-bottom: 1px solid var(--disclaimer-border);
     padding: 8px 20px;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--disclaimer-text);
     line-height: 1.4;
 }
@@ -479,7 +539,7 @@ body {
     width: 28px;
     height: 28px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
     display: flex;
     align-items: center;
@@ -489,7 +549,7 @@ body {
     background: var(--hover);
 }
 .cal-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text);
 }
@@ -500,14 +560,14 @@ body {
 }
 .cal-header {
     text-align: center;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--muted);
     padding: 4px 0;
 }
 .cal-day {
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
     padding: 6px 0;
     border-radius: 4px;
     cursor: default;
@@ -560,7 +620,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    font-size: 19px;
     line-height: 1;
     color: var(--text);
     transition: background 0.15s;
@@ -604,7 +664,7 @@ body {
     border-radius: 6px;
     padding: 4px 12px;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--accent);
     transition: background 0.15s;
@@ -624,20 +684,20 @@ body {
     margin-bottom: 16px;
 }
 .tutorial-heading {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--accent);
     margin-bottom: 6px;
 }
 .tutorial-content p {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     line-height: 1.6;
     margin-bottom: 6px;
 }
 .tutorial-list {
     margin: 6px 0 0 20px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     line-height: 1.7;
 }
@@ -679,7 +739,7 @@ body {
 .chat-bubble-inner {
     padding: 10px 14px;
     border-radius: 16px;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.6;
     word-break: break-word;
 }
@@ -705,10 +765,10 @@ body {
 .chat-bubble-inner.markdown h2,
 .chat-bubble-inner.markdown h3,
 .chat-bubble-inner.markdown h4 { margin: 10px 0 6px; line-height: 1.3; }
-.chat-bubble-inner.markdown h1 { font-size: 17px; }
-.chat-bubble-inner.markdown h2 { font-size: 15px; }
-.chat-bubble-inner.markdown h3 { font-size: 14px; }
-.chat-bubble-inner.markdown h4 { font-size: 13px; }
+.chat-bubble-inner.markdown h1 { font-size: 18px; }
+.chat-bubble-inner.markdown h2 { font-size: 16px; }
+.chat-bubble-inner.markdown h3 { font-size: 15px; }
+.chat-bubble-inner.markdown h4 { font-size: 14px; }
 .chat-bubble-inner.markdown ul,
 .chat-bubble-inner.markdown ol { margin: 4px 0 8px; padding-left: 20px; }
 .chat-bubble-inner.markdown li { margin: 2px 0; }
@@ -717,7 +777,7 @@ body {
     padding: 1px 5px;
     border-radius: 4px;
     font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-    font-size: 12px;
+    font-size: 13px;
 }
 .chat-bubble-inner.markdown pre {
     background: rgba(127, 127, 127, 0.14);
@@ -743,7 +803,7 @@ body {
     flex-shrink: 0;
     min-height: 40px;
     color: var(--text-secondary);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
@@ -804,7 +864,7 @@ body {
     align-self: flex-start;
     width: min(92%, 720px);
     color: var(--muted);
-    font-size: 12.5px;
+    font-size: 13.5px;
     line-height: 1.55;
     padding: 2px 0 0;
 }
@@ -854,17 +914,17 @@ body:not(.logged-in) #version-toggle { display: none; }
     margin-bottom: 6px;
 }
 .login-title {
-    font-size: 22px;
+    font-size: 23px;
     font-weight: 700;
     color: var(--text);
 }
 .login-sub {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--muted);
     margin-bottom: 4px;
 }
 .login-powered {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--accent-text);
     font-weight: 600;
     margin-bottom: 20px;
@@ -872,7 +932,7 @@ body:not(.logged-in) #version-toggle { display: none; }
 .login-field { margin-bottom: 14px; }
 .login-label {
     display: block;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 5px;
@@ -882,7 +942,7 @@ body:not(.logged-in) #version-toggle { display: none; }
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
     margin: 4px 0 18px;
     cursor: pointer;
@@ -892,11 +952,11 @@ body:not(.logged-in) #version-toggle { display: none; }
     width: 100%;
     margin-top: 0;
     padding: 11px;
-    font-size: 14px;
+    font-size: 15px;
 }
 .login-error {
     color: var(--danger);
-    font-size: 12.5px;
+    font-size: 13.5px;
     margin-top: 12px;
     min-height: 16px;
     text-align: center;
@@ -926,7 +986,7 @@ body:not(.logged-in) #version-toggle { display: none; }
     color: var(--accent);
     cursor: pointer;
     flex-shrink: 0;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     min-height: 36px;
     padding: 7px 12px;
@@ -952,7 +1012,7 @@ body:not(.logged-in) #version-toggle { display: none; }
     border: 1px solid var(--border-light);
     border-radius: 999px;
     padding: 7px 14px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     cursor: pointer;
     transition: filter 0.15s;
     text-align: left;
@@ -979,12 +1039,12 @@ body:not(.logged-in) #version-toggle { display: none; }
     background: var(--accent-soft);
     color: var(--accent-text);
     font-weight: 700;
-    font-size: 13px;
+    font-size: 14px;
 }
-.cas-card-head .cas-card-icon { font-size: 16px; }
+.cas-card-head .cas-card-icon { font-size: 17px; }
 .cas-card-badge {
     margin-left: auto;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     padding: 2px 9px;
     border-radius: 999px;
@@ -997,7 +1057,7 @@ body:not(.logged-in) #version-toggle { display: none; }
     gap: 10px;
     padding: 5px 0;
     border-bottom: 1px dashed var(--border-light);
-    font-size: 13px;
+    font-size: 14px;
 }
 .cas-field:last-of-type { border-bottom: none; }
 .cas-field-key {
@@ -1008,7 +1068,7 @@ body:not(.logged-in) #version-toggle { display: none; }
 }
 .cas-field-val { color: var(--text); word-break: break-word; flex: 1; }
 .cas-content-label {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text-secondary);
     margin: 12px 0 5px;
@@ -1018,7 +1078,7 @@ body:not(.logged-in) #version-toggle { display: none; }
     border: 1px solid var(--border-light);
     border-radius: 8px;
     padding: 10px;
-    font-size: 12.5px;
+    font-size: 13.5px;
     line-height: 1.55;
     color: var(--text);
     max-height: 220px;
@@ -1045,7 +1105,7 @@ textarea.cas-content-box { width: 100%; resize: vertical; min-height: 48px; max-
 .cas-card.is-cancelled .cas-card-head { background: var(--danger-soft); color: var(--danger); }
 .cas-card-status {
     padding: 0 14px 12px;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
 }
 
@@ -1114,7 +1174,7 @@ body.chat-active .chat-input-row {
 body.chat-active .chat-foot-note {
     display: block;
     text-align: center;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--muted);
     padding: 4px max(20px, calc((100% - var(--chat-col)) / 2)) 12px;
     background: var(--bg);
@@ -1122,7 +1182,7 @@ body.chat-active .chat-foot-note {
 
 /* Larger, screen-adaptive typography */
 body.chat-active .chat-bubble-inner {
-    font-size: clamp(15.5px, 0.5vw + 14px, 18px);
+    font-size: clamp(16.5px, 0.5vw + 15px, 19px);
     line-height: 1.78;
 }
 body.chat-active .chat-bubble-inner.markdown h1 { font-size: 1.45em; }
@@ -1150,7 +1210,7 @@ body.chat-active .chat-bubble.thinking .chat-bubble-inner { padding: 2px 0; }
 body.chat-active .chat-input {
     border-radius: 26px;
     padding: 14px 20px;
-    font-size: clamp(15px, 0.4vw + 13.5px, 16.5px);
+    font-size: clamp(16px, 0.4vw + 14.5px, 17.5px);
     line-height: 1.5;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -1174,7 +1234,7 @@ body.chat-active .chat-input:focus {
 body.chat-active .chat-input-row .btn {
     border-radius: 24px;
     padding: 13px 24px;
-    font-size: 14px;
+    font-size: 15px;
     align-self: flex-end;
     flex-shrink: 0;
 }
@@ -1183,7 +1243,7 @@ body.chat-active .chat-thinking-toggle {
     min-height: 46px;
 }
 body.chat-active .chat-chip {
-    font-size: 13px;
+    font-size: 14px;
     padding: 9px 16px;
 }
 
@@ -1196,12 +1256,12 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
 }
 .cas-card-head {
     padding: 13px 18px;
-    font-size: 14px;
+    font-size: 15px;
     background: linear-gradient(135deg, var(--accent-soft), var(--surface));
     border-bottom: 1px solid var(--border-light);
 }
 .cas-card-head .cas-card-icon {
-    font-size: 18px;
+    font-size: 19px;
     width: 30px;
     height: 30px;
     display: inline-flex;
@@ -1212,23 +1272,23 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     box-shadow: 0 1px 4px var(--shadow-calendar);
 }
 .cas-card-badge {
-    font-size: 11.5px;
+    font-size: 12.5px;
     padding: 3px 11px;
     border: 1px solid var(--border-light);
 }
 .cas-card-body { padding: 16px 18px; }
 .cas-field {
     padding: 8px 0;
-    font-size: 14px;
+    font-size: 15px;
 }
 .cas-field-key { width: 120px; }
 .cas-content-label {
-    font-size: 12.5px;
+    font-size: 13.5px;
     margin: 14px 0 6px;
     text-transform: none;
 }
 .cas-content-box {
-    font-size: 13.5px;
+    font-size: 14.5px;
     line-height: 1.65;
     padding: 12px 14px;
     border-radius: 10px;
@@ -1240,10 +1300,10 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
 }
 .cas-card-actions .btn {
     padding: 11px 22px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     border-radius: 12px;
 }
-.cas-card-status { padding: 0 18px 16px; font-size: 13px; }
+.cas-card-status { padding: 0 18px 16px; font-size: 14px; }
 
 /* ---- Attach (+) button, menu, and file chips ---- */
 .chat-foot-note { display: none; }
@@ -1255,7 +1315,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    font-size: 24px;
+    font-size: 25px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1287,13 +1347,13 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     border: none;
     border-radius: 9px;
     padding: 10px 12px;
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text);
     cursor: pointer;
     text-align: left;
 }
 .chat-attach-item:hover { background: var(--hover); }
-.chat-attach-ico { font-size: 16px; }
+.chat-attach-ico { font-size: 17px; }
 .chat-attachments {
     display: flex;
     flex-wrap: wrap;
@@ -1310,18 +1370,18 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 8px 10px;
-    font-size: 13px;
+    font-size: 14px;
 }
-.chat-chip-file .cf-ico { font-size: 16px; flex-shrink: 0; line-height: 1; }
+.chat-chip-file .cf-ico { font-size: 17px; flex-shrink: 0; line-height: 1; }
 .chat-chip-file .cf-body { min-width: 0; display: flex; flex-direction: column; }
 .chat-chip-file .cf-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
-.chat-chip-file .cf-meta { font-size: 11px; color: var(--muted); }
+.chat-chip-file .cf-meta { font-size: 12px; color: var(--muted); }
 .chat-chip-file .cf-remove {
     background: none;
     border: none;
     color: var(--muted);
     cursor: pointer;
-    font-size: 17px;
+    font-size: 18px;
     line-height: 1;
     flex-shrink: 0;
     padding: 0 2px;
@@ -1331,7 +1391,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
 .chat-chip-file.is-loading { opacity: 0.75; }
 .chat-attach-tags {
     margin-top: 7px;
-    font-size: 12px;
+    font-size: 13px;
     opacity: 0.85;
     display: flex;
     flex-wrap: wrap;
@@ -1349,7 +1409,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 13.5px;
+    font-size: 14.5px;
     color: var(--text);
     cursor: pointer;
     padding: 5px 6px;
@@ -1400,7 +1460,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     background: var(--surface);
 }
 .quick-modal-title {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 700;
     color: var(--text);
     text-align: center;
@@ -1412,7 +1472,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     border-radius: 50%;
     background: var(--surface);
     color: var(--text);
-    font-size: 22px;
+    font-size: 23px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1420,7 +1480,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     justify-content: center;
 }
 .quick-icon-btn:hover { background: var(--hover); }
-.quick-close-btn { font-size: 24px; }
+.quick-close-btn { font-size: 25px; }
 .quick-modal-body {
     overflow-y: auto;
     padding: 16px;
@@ -1441,7 +1501,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     margin-bottom: 10px;
 }
 .quick-card-title {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
     color: var(--text-secondary);
 }
@@ -1453,7 +1513,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     margin-bottom: 10px;
 }
 .quick-label {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--text-secondary);
 }
@@ -1480,7 +1540,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     background: var(--surface);
     color: var(--text);
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: 14px;
     cursor: pointer;
 }
 .quick-file-btn:hover { background: var(--hover); }
@@ -1515,7 +1575,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     align-items: center;
     gap: 7px;
     min-width: 0;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text);
     padding: 5px 6px;
     border-radius: 6px;
@@ -1540,7 +1600,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     border-radius: 50%;
     background: transparent;
     color: var(--danger);
-    font-size: 17px;
+    font-size: 18px;
     line-height: 1;
     cursor: pointer;
 }
@@ -1559,7 +1619,7 @@ body.chat-active .cas-card { width: 100%; max-width: 100%; }
     align-items: center;
     gap: 8px;
     color: var(--text-secondary);
-    font-size: 12.5px;
+    font-size: 13.5px;
     font-weight: 600;
     cursor: pointer;
     user-select: none;
