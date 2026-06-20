@@ -114,7 +114,7 @@ const I18N = {
         issue_add_files: "Add attachments",
         issue_send: "Send report",
         issue_sending: "Sending report...",
-        issue_sent: "Report submitted. If this is the first submission, check the inbox/spam folder for the FormSubmit confirmation email.",
+        issue_sent: "Report submitted. Thank you.",
         issue_required: "Please include a summary and details.",
         issue_too_many: "You can attach up to 5 files.",
         issue_file_too_large: "Each attachment must be 10 MB or smaller.",
@@ -292,7 +292,7 @@ const I18N = {
         issue_add_files: "\u6DFB\u52A0\u9644\u4EF6",
         issue_send: "\u53D1\u9001\u62A5\u544A",
         issue_sending: "\u6B63\u5728\u53D1\u9001...",
-        issue_sent: "\u62A5\u544A\u5DF2\u63D0\u4EA4\u3002\u5982\u679C\u662F\u7B2C\u4E00\u6B21\u4F7F\u7528\uFF0C\u8BF7\u68C0\u67E5 FormSubmit \u786E\u8BA4\u90AE\u4EF6\uFF08\u5305\u62EC\u5783\u573E\u7BB1\uFF09\u3002",
+        issue_sent: "\u62A5\u544A\u5DF2\u63D0\u4EA4\uFF0C\u8C22\u8C22\u3002",
         issue_required: "\u8BF7\u586B\u5199\u6458\u8981\u548C\u8BE6\u60C5\u3002",
         issue_too_many: "\u6700\u591A\u53EA\u80FD\u9644\u52A0 5 \u4E2A\u6587\u4EF6\u3002",
         issue_file_too_large: "\u6BCF\u4E2A\u9644\u4EF6\u4E0D\u80FD\u8D85\u8FC7 10 MB\u3002",
@@ -1659,7 +1659,7 @@ async function submitIssueReport(e) {
         form.reset();
         issueFiles = [];
         renderIssueAttachments();
-        setIssueStatus(t.issue_sent || "Report submitted. If this is the first submission, check the confirmation email.", "success");
+        setIssueStatus(t.issue_sent || "Report submitted. Thank you.", "success");
     } catch (err) {
         setIssueStatus(err.message || "Could not send report.", "error");
     } finally {
