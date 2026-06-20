@@ -106,6 +106,7 @@ MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))
 MAX_UPLOAD_FILES = int(os.environ.get("MAX_UPLOAD_FILES", "5"))
 MAX_EXTRACT_CHARS = int(os.environ.get("MAX_EXTRACT_CHARS", "120000"))  # per file, sent to model
 ISSUE_REPORT_EMAIL = os.environ.get("ISSUE_REPORT_EMAIL", "nagasakisoyo090209@gmail.com")
+ISSUE_REPORT_PROVIDER = os.environ.get("ISSUE_REPORT_PROVIDER", "smtp").strip().lower()
 ISSUE_REPORT_MAX_FILES = int(os.environ.get("ISSUE_REPORT_MAX_FILES", "5"))
 ISSUE_REPORT_MAX_FILE_BYTES = int(os.environ.get("ISSUE_REPORT_MAX_FILE_BYTES", str(10 * 1024 * 1024)))
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
@@ -1720,20 +1721,23 @@ def report_issue():
 
     if not summary or not details:
         return jsonify({"error": "Please include a summary and details."}), 400
-    if not SMTP_USER or not SMTP_PASSWORD:
-        return jsonify({"error": "Issue email is not configured on the server. Set SMTP_USER and SMTP_PASSWORD."}), 500
 
-    files = request.files.getlist("attachments")
-    if len(files) > ISSUE_REPORT_MAX_FILES:
+    uploads = request.files.getlist("attachments")
+    if len(uploads) > ISSUE_REPORT_MAX_FILES:
         return jsonify({"error": f"Too many attachments (max {ISSUE_REPORT_MAX_FILES})."}), 400
 
-    msg = EmailMessage()
-    msg["Subject"] = f"[CAS Monster Issue] {category}: {summary[:80]}"
-    msg["From"] = SMTP_FROM
-    msg["To"] = ISSUE_REPORT_EMAIL
-    msg["Date"] = formatdate(localtime=True)
-    if contact and "@" in contact:
-        msg["Reply-To"] = contact
+    attachments = []
+    total_attachment_bytes = 0
+    for idx, f in enumerate(uploads, start=1):
+        filename = safe_str(os.path.basename(f.filename or f"attachment-{idx}"), 255) or f"attachment-{idx}"
+        data = f.read(ISSUE_REPORT_MAX_FILE_BYTES + 1)
+        if len(data) > ISSUE_REPORT_MAX_FILE_BYTES:
+            return jsonify({"error": f"Attachment '{filename}' is too large."}), 400
+        if not data:
+            continue
+        total_attachment_bytes += len(data)
+        content_type = f.mimetype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+        attachments.append((filename, data, content_type))
 
     body = (
         f"Category: {category}\n"
@@ -1745,16 +1749,55 @@ def report_issue():
         f"User-Agent: {user_agent or 'Not provided'}\n\n"
         f"Details:\n{details}\n"
     )
+
+    if ISSUE_REPORT_PROVIDER == "formsubmit":
+        if total_attachment_bytes > 10 * 1024 * 1024:
+            return jsonify({"error": "FormSubmit attachments must be 10 MB total or smaller."}), 400
+        form_data = {
+            "_subject": f"[CAS Monster Issue] {category}: {summary[:80]}",
+            "_template": "table",
+            "_captcha": "false",
+            "category": category,
+            "summary": summary,
+            "details": details,
+            "contact": contact,
+            "page_url": page_url,
+            "user_agent": user_agent,
+            "message": body,
+        }
+        if contact and "@" in contact:
+            form_data["email"] = contact
+        files_payload = [
+            ("attachment", (filename, io.BytesIO(data), content_type))
+            for filename, data, content_type in attachments
+        ]
+        try:
+            resp = requests.post(
+                f"https://formsubmit.co/ajax/{ISSUE_REPORT_EMAIL}",
+                data=form_data,
+                files=files_payload,
+                timeout=15,
+            )
+            if resp.status_code >= 400:
+                detail = resp.text[:300] or f"HTTP {resp.status_code}"
+                return jsonify({"error": f"Could not send report through FormSubmit: {detail}"}), 502
+        except Exception as e:
+            return jsonify({"error": f"Could not send report through FormSubmit: {sanitize_error(e)}"}), 500
+        return jsonify({"ok": True, "provider": "formsubmit"})
+
+    if not SMTP_USER or not SMTP_PASSWORD:
+        return jsonify({"error": "Issue email is not configured on the server. Set SMTP_USER and SMTP_PASSWORD."}), 500
+
+    msg = EmailMessage()
+    msg["Subject"] = f"[CAS Monster Issue] {category}: {summary[:80]}"
+    msg["From"] = SMTP_FROM
+    msg["To"] = ISSUE_REPORT_EMAIL
+    msg["Date"] = formatdate(localtime=True)
+    if contact and "@" in contact:
+        msg["Reply-To"] = contact
     msg.set_content(body)
 
-    for idx, f in enumerate(files, start=1):
-        filename = safe_str(os.path.basename(f.filename or f"attachment-{idx}"), 255) or f"attachment-{idx}"
-        data = f.read(ISSUE_REPORT_MAX_FILE_BYTES + 1)
-        if len(data) > ISSUE_REPORT_MAX_FILE_BYTES:
-            return jsonify({"error": f"Attachment '{filename}' is too large."}), 400
-        if not data:
-            continue
-        content_type = f.mimetype or mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    for filename, data, content_type in attachments:
         maintype, subtype = content_type.split("/", 1) if "/" in content_type else ("application", "octet-stream")
         msg.add_attachment(data, maintype=maintype, subtype=subtype, filename=filename)
 
@@ -1770,7 +1813,7 @@ def report_issue():
             detail = "Outlook refused SMTP login because SMTP AUTH is disabled for this mailbox. Enable SMTP AUTH for the mailbox or use another SMTP provider such as Gmail App Password."
         return jsonify({"error": f"Could not send report: {detail}"}), 500
 
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "provider": "smtp"})
 
 @app.route("/api/upload", methods=["POST"])
 def upload_files():
