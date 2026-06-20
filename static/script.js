@@ -326,6 +326,7 @@ let currentLang = localStorage.getItem("cas-lang") || "en";
 const THINKING_KEY = "cas-thinking-enabled";
 const VERSION_KEY = "cas-version-mode";
 const OLD_VERSION_TABS = ["tab-records", "tab-batch", "tab-reflection", "tab-tutorial"];
+const CHAT_HISTORY_LIMIT = 1000;
 
 function applyLang(lang) {
     currentLang = lang;
@@ -505,7 +506,7 @@ socket.on("clubs_fetched", (data) => {
     populateSelect("ref-club", data.clubs_reflection);
     availableRecordClubs = data.clubs_records || [];
     availableReflectionClubs = data.clubs_reflection || [];
-    availableClubs = data.clubs_reflection || data.clubs_records || [];
+    availableClubs = Array.from(new Set([...availableRecordClubs, ...availableReflectionClubs]));
     refreshQuickClubSelects();
     setButtonsRunning(false);
     appendLog("[Clubs] Dropdowns updated.");
@@ -1649,7 +1650,7 @@ async function sendChat() {
                 appendChatBubble("assistant", I18N[currentLang].chat_empty || "…");
             }
         }
-        if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+        if (chatHistory.length > CHAT_HISTORY_LIMIT) chatHistory = chatHistory.slice(-CHAT_HISTORY_LIMIT);
     } catch (e) {
         thinkingBubble.remove();
         appendChatBubble("assistant", "Network error: " + e.message);
