@@ -1451,7 +1451,8 @@ def _missing_required_details(name: str, args: dict, history, user_message: str,
     if name == "create_activity_record":
         if not DATE_HINT_RE.search(context):
             missing.append("date")
-        content_values = [args.get("activity_desc", ""), args.get("theme", "")]
+        content_values = [args.get("activity_desc", ""), args.get("description", ""),
+                          args.get("desc", ""), args.get("activity", ""), args.get("theme", "")]
         if not _has_supported_content(content_values, context, club):
             missing.append("activity_detail")
         if not _has_explicit_hours(context):
@@ -1508,7 +1509,10 @@ def build_record_proposal(args: dict) -> dict:
     club = safe_str(args.get("club", ""), 200)
     date_str = safe_str(args.get("date", ""), 20).replace("-", "/")
     theme = safe_str(args.get("theme", ""), 500)
-    activity_desc = safe_str(args.get("activity_desc", ""), 1000)
+    activity_desc = safe_str(
+        args.get("activity_desc") or args.get("description") or args.get("desc") or args.get("activity") or "",
+        2000,
+    )
     c = _norm_hours(args.get("c_hours", "0"))
     a = _norm_hours(args.get("a_hours", "0"))
     s = _norm_hours(args.get("s_hours", "0"))
@@ -1550,7 +1554,11 @@ def build_bulk_record_proposals(args: dict) -> list:
         if not isinstance(raw, dict):
             raise ValueError(f"Record {idx} is invalid.")
         record_args = dict(raw)
-        record_args["activity_desc"] = safe_str(record_args.get("activity_desc", ""), 2000)
+        record_args["activity_desc"] = safe_str(
+            record_args.get("activity_desc") or record_args.get("description") or
+            record_args.get("desc") or record_args.get("activity") or "",
+            2000,
+        )
         record_args["thinking_enabled"] = bool(args.get("thinking_enabled", False))
         proposals.append(build_record_proposal(record_args))
     return proposals
@@ -1663,6 +1671,39 @@ def _first_tool_call(msg: dict):
     return tcs[0] if tcs else None
 
 
+def _tool_call_from_text(text: str):
+    """Recover when the model prints a tool-call JSON object as plain text."""
+    cleaned = (text or "").strip()
+    if not cleaned:
+        return None
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```[a-zA-Z0-9]*\n", "", cleaned)
+        cleaned = re.sub(r"\n```$", "", cleaned).strip()
+
+    candidates = [cleaned]
+    if '"arguments"' in cleaned and not cleaned.lstrip().startswith("{"):
+        candidates.append("{" + cleaned.rstrip().rstrip(",") + "}")
+
+    for candidate in candidates:
+        try:
+            obj = parse_json_object(candidate)
+        except Exception:
+            continue
+        if isinstance(obj.get("tool_calls"), list) and obj["tool_calls"]:
+            call = obj["tool_calls"][0]
+            if isinstance(call, dict) and call.get("function"):
+                return call
+        fn_name = obj.get("function") or obj.get("name")
+        args = obj.get("arguments", {})
+        if isinstance(fn_name, dict):
+            args = fn_name.get("arguments", args)
+            fn_name = fn_name.get("name")
+        if isinstance(fn_name, str) and fn_name in _PROPOSAL_BUILDERS:
+            args_str = args if isinstance(args, str) else json.dumps(args if isinstance(args, dict) else {}, ensure_ascii=False)
+            return {"function": {"name": fn_name, "arguments": args_str}}
+    return None
+
+
 def _force_tool_call(base_messages: list, prior_text: str, thinking_enabled: Optional[bool] = None):
     """Re-prompt the model to actually emit a function call when it stalled.
 
@@ -1694,6 +1735,28 @@ def _force_tool_call(base_messages: list, prior_text: str, thinking_enabled: Opt
 
 # --------------- File upload (Qwen-Long file-extract) ---------------
 
+def _looks_like_date_header(header: str) -> bool:
+    return bool(re.search(r"date|day|time|\u65e5\u671f|\u65f6\u95f4|\u6d3b\u52a8\u65e5", str(header or ""), re.I))
+
+
+def _spreadsheet_cell_text(value, header: str = "") -> str:
+    if value is None:
+        return ""
+    if isinstance(value, dt_date):
+        return value.strftime("%Y/%m/%d")
+    if _looks_like_date_header(header):
+        try:
+            num = float(value)
+            if 20000 <= num <= 80000:
+                from openpyxl.utils.datetime import from_excel
+                converted = from_excel(num)
+                if isinstance(converted, dt_date):
+                    return converted.strftime("%Y/%m/%d")
+        except Exception:
+            pass
+    return str(value).strip()
+
+
 def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
     """Return readable table text from CSV/XLSX without relying on model parsing."""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -1705,7 +1768,7 @@ def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
             for ws in wb.worksheets:
                 rows = []
                 for row in ws.iter_rows(values_only=True):
-                    vals = ["" if c is None else str(c).strip() for c in row]
+                    vals = list(row)
                     if any(vals):
                         rows.append(vals)
                     if len(rows) >= 300:
@@ -1741,7 +1804,7 @@ def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
     for sheet, rows in rows_by_sheet:
         max_cols = max(len(r) for r in rows)
         normalized = [r + [""] * (max_cols - len(r)) for r in rows]
-        header = normalized[0]
+        header = [_spreadsheet_cell_text(c) for c in normalized[0]]
         has_header = any(re.search(r"[A-Za-z\u4e00-\u9fff]", c or "") for c in header)
         blocks.append(f"[Spreadsheet: {filename} / {sheet}]")
         if has_header:
@@ -1753,13 +1816,14 @@ def extract_spreadsheet_locally(filename: str, data: bytes) -> dict:
             if has_header:
                 pairs = []
                 for i, cell in enumerate(row):
-                    if cell:
-                        key = header[i] if i < len(header) and header[i] else f"Column {i + 1}"
-                        pairs.append(f"{key}: {cell}")
+                    key = header[i] if i < len(header) and header[i] else f"Column {i + 1}"
+                    cell_text = _spreadsheet_cell_text(cell, key)
+                    if cell_text:
+                        pairs.append(f"{key}: {cell_text}")
                 if pairs:
                     blocks.append(f"Row {ridx}: " + "; ".join(pairs))
             else:
-                blocks.append(f"Row {ridx}: " + " | ".join(row))
+                blocks.append(f"Row {ridx}: " + " | ".join(_spreadsheet_cell_text(c) for c in row))
     text = "\n".join(blocks).strip()
     truncated = len(text) > MAX_EXTRACT_CHARS
     if truncated:
@@ -2206,6 +2270,10 @@ def chat_cas():
         text = (msg.get("content") or "").strip()
         reasoning = (msg.get("reasoning_content") or "").strip()
         call = _first_tool_call(msg)
+        if not call:
+            call = _tool_call_from_text(text)
+            if call:
+                text = ""
 
         # Fallback: the model said it would act (or returned nothing) but never
         # emitted a tool call. Force the call so the user actually gets a card.
@@ -2223,6 +2291,9 @@ def chat_cas():
             thinking_msg = thinking_resp["choices"][0]["message"]
             text = (thinking_msg.get("content") or "").strip()
             reasoning = (thinking_msg.get("reasoning_content") or "").strip()
+            call = _tool_call_from_text(text)
+            if call:
+                text = ""
 
         if call:
             fn = call.get("function", {}) or {}

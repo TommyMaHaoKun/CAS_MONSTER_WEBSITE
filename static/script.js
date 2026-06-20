@@ -1813,7 +1813,8 @@ async function sendChat() {
         if (data.error) {
             appendChatBubble("assistant", "Error: " + data.error);
         } else {
-            if (thinkingEnabled && data.reasoning) {
+            const hasActionCards = !!data.proposal || !!(data.proposals && data.proposals.length);
+            if (thinkingEnabled && data.reasoning && !hasActionCards) {
                 appendThinkingContent(data.reasoning);
             }
             if (data.reply) {
