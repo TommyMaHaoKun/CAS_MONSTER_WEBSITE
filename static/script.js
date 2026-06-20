@@ -134,6 +134,8 @@ const I18N = {
         card_badge_done: "Submitted",
         card_badge_cancelled: "Cancelled",
         card_badge_running: "Submitting…",
+        card_badge_queued: "Queued",
+        card_queued_msg: "Waiting to submit…",
         card_club: "Club",
         card_date: "Date",
         card_theme: "Theme",
@@ -318,6 +320,8 @@ const I18N = {
         card_badge_done: "\u5DF2\u63D0\u4EA4",
         card_badge_cancelled: "\u5DF2\u53D6\u6D88",
         card_badge_running: "\u63D0\u4EA4\u4E2D\u2026",
+        card_badge_queued: "\u6392\u961F\u4E2D",
+        card_queued_msg: "\u7B49\u5F85\u63D0\u4EA4\u2026",
         card_club: "\u793E\u56E2",
         card_date: "\u65E5\u671F",
         card_theme: "\u4E3B\u9898",
@@ -518,6 +522,11 @@ let availableClubs = [];          // clubs known to the chat agent
 let availableRecordClubs = [];
 let availableReflectionClubs = [];
 const submittingCards = { record: [], reflection: [], batch: [] }; // FIFO of card ids awaiting task_done
+// FIFO of card ids waiting for a bulk "Approve all". The backend handles one
+// task at a time, so we submit them one by one — approving the next only after
+// the previous task_done — instead of flooding the server (which replies
+// "Server busy" and drops the overflow).
+let bulkApproveQueue = [];
 
 // ---- Socket events ----
 socket.on("connect", () => {
@@ -586,6 +595,12 @@ socket.on("task_done", (data) => {
     if (submittingCards[task] && submittingCards[task].length) {
         const cardId = submittingCards[task].shift();
         markCardDone(cardId);
+    }
+    // The card that just finished was the head of the bulk queue; drop it and
+    // kick off the next one.
+    if (bulkApproveQueue.length) {
+        bulkApproveQueue.shift();
+        processBulkQueue();
     }
 });
 
@@ -1907,11 +1922,19 @@ function renderProposalGroup(proposals) {
     const pendingCards = () => Array.from(body.querySelectorAll(".cas-card")).filter(
         (c) => !c.classList.contains("is-running") &&
                !c.classList.contains("is-done") &&
-               !c.classList.contains("is-cancelled"));
+               !c.classList.contains("is-cancelled") &&
+               !c.classList.contains("is-queued"));
     const refreshBulk = () => { actions.hidden = pendingCards().length === 0; };
-    group.querySelector(".cas-card-group-approve").addEventListener("click", () => {
+    group.querySelector(".cas-card-group-approve").addEventListener("click", (e) => {
         if (!CURRENT_USER || !CURRENT_PW) { alert(I18N[currentLang].card_need_login); return; }
-        pendingCards().forEach((c) => approveCard(c.id));
+        const ids = pendingCards().map((c) => c.id);
+        if (!ids.length) return;
+        e.currentTarget.disabled = true; // avoid double-queueing on repeat clicks
+        // Queue them all, then submit one at a time so the backend (single task
+        // at a time) isn't flooded into "Server busy" and dropping submissions.
+        const wasIdle = bulkApproveQueue.length === 0;
+        ids.forEach((id) => { setCardQueued(id); bulkApproveQueue.push(id); });
+        if (wasIdle) processBulkQueue();
         refreshBulk();
     });
     group.querySelector(".cas-card-group-cancel").addEventListener("click", () => {
@@ -2024,11 +2047,13 @@ function setCardBadge(card, text, klass) {
     if (klass) card.classList.add(klass);
 }
 
+// Returns true when a submission was actually started (so the bulk queue knows
+// to wait for task_done); false when the card was skipped (missing/invalid).
 function approveCard(id) {
     const p = cardProposals[id];
     const card = document.getElementById(id);
-    if (!p || !card) return;
-    if (!CURRENT_USER || !CURRENT_PW) { alert(I18N[currentLang].card_need_login); return; }
+    if (!p || !card) return false;
+    if (!CURRENT_USER || !CURRENT_PW) { alert(I18N[currentLang].card_need_login); return false; }
     const t = I18N[currentLang];
     const acc = { username: CURRENT_USER, password: CURRENT_PW };
 
@@ -2038,7 +2063,7 @@ function approveCard(id) {
         submittingCards.record.push(id);
     } else if (p.action === "reflection") {
         const outcomes = Array.from(card.querySelectorAll(".cas-outcome-cb:checked")).map((e) => e.value);
-        if (outcomes.length === 0) { alert(t.card_need_outcome); return; }
+        if (outcomes.length === 0) { alert(t.card_need_outcome); return false; }
         const summaries = Array.from(card.querySelectorAll(".cas-refl-summary")).map((e) => e.value);
         const contents = Array.from(card.querySelectorAll(".cas-refl-content")).map((e) => e.value);
         socket.emit("run_reflection", {
@@ -2068,6 +2093,44 @@ function approveCard(id) {
         card.appendChild(status);
     }
     status.innerHTML = '<span class="spinner"></span>' + (t.card_submitting || "Submitting…");
+    return true;
+}
+
+// Mark a card as waiting in the bulk-approve queue: lock its inputs and badge it
+// so the user can see it is lined up rather than stuck on "Needs approval".
+function setCardQueued(id) {
+    const card = document.getElementById(id);
+    if (!card) return;
+    const t = I18N[currentLang];
+    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    card.classList.add("is-queued");
+    setCardBadge(card, t.card_badge_queued || "Queued");
+    let status = card.querySelector(".cas-card-status");
+    if (!status) {
+        status = document.createElement("div");
+        status.className = "cas-card-status";
+        card.appendChild(status);
+    }
+    status.textContent = t.card_queued_msg || "Waiting to submit…";
+}
+
+// Submit the head of the bulk queue. Cards that are no longer submittable
+// (cancelled elsewhere, already settled, or failing validation) are skipped so
+// the queue keeps draining instead of stalling.
+function processBulkQueue() {
+    while (bulkApproveQueue.length) {
+        const id = bulkApproveQueue[0];
+        const card = document.getElementById(id);
+        const settled = card && (card.classList.contains("is-running") ||
+            card.classList.contains("is-done") || card.classList.contains("is-cancelled"));
+        if (!card || !cardProposals[id] || settled) {
+            bulkApproveQueue.shift();
+            continue;
+        }
+        card.classList.remove("is-queued");
+        if (approveCard(id)) return; // submitting; wait for task_done to advance
+        bulkApproveQueue.shift();     // skipped (e.g. validation failed)
+    }
 }
 
 function markCardDone(id) {

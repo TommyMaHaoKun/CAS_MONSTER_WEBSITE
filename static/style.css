@@ -1100,6 +1100,7 @@ textarea.cas-content-box { width: 100%; resize: vertical; min-height: 48px; max-
 .cas-btn-edit:hover:not(:disabled) { background: var(--hover); }
 .cas-btn-cancel { background: transparent; color: var(--danger); border: 1px solid var(--border); }
 .cas-btn-cancel:hover:not(:disabled) { background: var(--danger-soft); }
+.cas-card.is-queued { opacity: 0.7; }
 .cas-card.is-done { opacity: 0.85; }
 .cas-card.is-done .cas-card-head { background: var(--success-soft); color: var(--success); }
 .cas-card.is-cancelled .cas-card-head { background: var(--danger-soft); color: var(--danger); }
