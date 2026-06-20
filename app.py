@@ -100,7 +100,13 @@ ALLOWED_UPLOAD_EXT = {"txt", "md", "csv", "log", "json",
                       "jpg", "jpeg", "png", "webp", "bmp", "gif"}
 MAX_UPLOAD_BYTES = int(os.environ.get("MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))  # 10 MB/file
 MAX_UPLOAD_FILES = int(os.environ.get("MAX_UPLOAD_FILES", "5"))
-MAX_EXTRACT_CHARS = int(os.environ.get("MAX_EXTRACT_CHARS", "12000"))  # per file, sent to model
+MAX_EXTRACT_CHARS = int(os.environ.get("MAX_EXTRACT_CHARS", "120000"))  # per file, sent to model
+QWEN_DEFAULT_CONTEXT_TOKENS = int(os.environ.get("QWEN_DEFAULT_CONTEXT_TOKENS", "1000000"))
+# Qwen docs describe 1M tokens as roughly 700k Chinese characters. Use a
+# character budget so chat history can use the model's default window without
+# adding tokenizer dependencies.
+CHAT_CONTEXT_CHAR_BUDGET = int(os.environ.get("CHAT_CONTEXT_CHAR_BUDGET", "700000"))
+CHAT_MAX_MESSAGE_CHARS = int(os.environ.get("CHAT_MAX_MESSAGE_CHARS", str(CHAT_CONTEXT_CHAR_BUDGET)))
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("FLASK_SECRET_KEY", secrets.token_hex(32))
@@ -1192,11 +1198,11 @@ CAS_TOOLS = [
                 "type": "object",
                 "properties": {
                     "club": {"type": "string", "description": "Club name. Must match one of the available clubs exactly."},
-                    "date": {"type": "string", "description": "Activity date in YYYY/MM/DD format."},
+                    "date": {"type": "string", "description": "Activity date in YYYY/MM/DD format. Required; never default to today's date if the user did not explicitly provide a date."},
                     "theme": {"type": "string", "description": "Short activity theme, e.g. 'Cold War Origins Discussion'."},
-                    "c_hours": {"type": "string", "description": "Creativity hours, a number. Default '0'."},
-                    "a_hours": {"type": "string", "description": "Activity hours, a number. Default '0'."},
-                    "s_hours": {"type": "string", "description": "Service hours, a number. Default '0'."},
+                    "c_hours": {"type": "string", "description": "Creativity hours, a number. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
+                    "a_hours": {"type": "string", "description": "Activity hours, a number. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
+                    "s_hours": {"type": "string", "description": "Service hours, a number. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
                 },
                 "required": ["club", "date", "theme"],
             },
@@ -1211,14 +1217,14 @@ CAS_TOOLS = [
                 "type": "object",
                 "properties": {
                     "club": {"type": "string", "description": "Club name. Must match one of the available clubs exactly."},
-                    "club_desc": {"type": "string", "description": "Brief description of the club, used to guide content generation."},
+                    "club_desc": {"type": "string", "description": "Brief description of the weekly activity or club, based on details the user explicitly provided."},
                     "weekday": {"type": "string", "enum": WEEKDAYS, "description": "The weekday on which the activity recurs."},
                     "start_date": {"type": "string", "description": "First date in YYYY/MM/DD. Must fall on the given weekday."},
                     "end_date": {"type": "string", "description": "Last date in YYYY/MM/DD. Must fall on the given weekday."},
                     "periodic": {"type": "string", "description": "Optional. A recurring overarching activity all weeks share."},
-                    "c_hours": {"type": "string", "description": "Creativity hours per record. Default '0'."},
-                    "a_hours": {"type": "string", "description": "Activity hours per record. Default '0'."},
-                    "s_hours": {"type": "string", "description": "Service hours per record. Default '0'."},
+                    "c_hours": {"type": "string", "description": "Creativity hours per record. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
+                    "a_hours": {"type": "string", "description": "Activity hours per record. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
+                    "s_hours": {"type": "string", "description": "Service hours per record. Use '0' only for categories the user omitted after they explicitly provided at least one C/A/S hour."},
                 },
                 "required": ["club", "club_desc", "weekday", "start_date", "end_date"],
             },
@@ -1248,6 +1254,185 @@ CAS_TOOLS = [
 def _norm_hours(v, default="0"):
     v = str(v).strip() if v is not None else ""
     return v if re.match(r"^\d+(\.\d+)?$", v) else (default if not v else v)
+
+
+DATE_HINT_RE = re.compile(
+    r"\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b|"
+    r"\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b|"
+    r"\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|"
+    r"jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|"
+    r"dec(?:ember)?)\s+\d{1,2}(?:,\s*\d{4})?\b|"
+    r"\b(?:today|tomorrow|yesterday)\b|"
+    r"\d{1,2}\s*\u6708\s*\d{1,2}\s*\u65e5|"
+    r"\u4eca\u5929|\u660e\u5929|\u6628\u5929",
+    re.I,
+)
+HOURS_HINT_RE = re.compile(
+    r"\b[CAS]\s*[:=]?\s*\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours)?\b|"
+    r"\b(?:creativity|activity|service)\s*(?:hours?)?\s*[:=]?\s*\d+(?:\.\d+)?\b|"
+    r"\b\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours)\s*(?:of\s*)?(?:creativity|activity|service)\b|"
+    r"[CAS]\s*\d+(?:\.\d+)?\s*\u5c0f\u65f6|"
+    r"(?:\u521b\u9020|\u521b\u9020\u529b|\u6d3b\u52a8|\u670d\u52a1)\s*\d+(?:\.\d+)?\s*\u5c0f\u65f6",
+    re.I,
+)
+_GENERIC_CONTENT_TOKENS = {
+    "activity", "record", "reflection", "club", "cas", "session", "meeting",
+    "event", "experience", "write", "create", "fill", "log", "make", "about",
+    "weekly", "batch", "semester", "school", "student", "students",
+}
+
+
+def _looks_chinese(text: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]", text or ""))
+
+
+def _agent_context_text(history, user_message: str, attachments=None) -> str:
+    parts = [user_message or ""]
+    if isinstance(history, list):
+        for h in history:
+            if isinstance(h, dict) and h.get("role") == "user" and isinstance(h.get("content"), str):
+                parts.append(h["content"])
+    for nm, tx in attachments or []:
+        parts.append(nm or "")
+        parts.append(tx or "")
+    return "\n".join(parts)
+
+
+def _has_explicit_hours(context: str) -> bool:
+    return bool(HOURS_HINT_RE.search(context or ""))
+
+
+def _context_tokens(text: str) -> list:
+    return re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]+", (text or "").lower())
+
+
+def _meaningful_tokens(text: str, exclude: str = "") -> set:
+    exclude_tokens = set(_context_tokens(exclude))
+    tokens = set()
+    for tok in _context_tokens(text):
+        if tok in exclude_tokens or tok in _GENERIC_CONTENT_TOKENS:
+            continue
+        if re.fullmatch(r"\d+(?:\.\d+)?", tok):
+            continue
+        if re.fullmatch(r"[a-z0-9]+", tok) and len(tok) <= 2:
+            continue
+        tokens.add(tok)
+    return tokens
+
+
+def _value_supported_by_context(value: str, context: str, exclude: str = "") -> bool:
+    value = safe_str(value, 1000)
+    if not value:
+        return False
+    value_norm = re.sub(r"\s+", " ", value).strip().lower()
+    context_norm = re.sub(r"\s+", " ", context or "").strip().lower()
+    if value_norm and value_norm in context_norm:
+        return True
+    value_tokens = _meaningful_tokens(value, exclude)
+    if not value_tokens:
+        return False
+    context_tokens = _meaningful_tokens(context, exclude)
+    overlap = value_tokens & context_tokens
+    required = 1 if len(value_tokens) <= 2 else max(2, (len(value_tokens) + 1) // 2)
+    return len(overlap) >= required
+
+
+def _has_supported_content(values, context: str, exclude: str = "") -> bool:
+    for value in values:
+        if _value_supported_by_context(value, context, exclude):
+            return True
+    return False
+
+
+def _club_is_valid(club: str, clubs: list) -> bool:
+    return bool(club) and (not clubs or club in clubs)
+
+
+def _missing_followup(action: str, missing: list, user_message: str) -> str:
+    zh = _looks_chinese(user_message)
+    labels = {
+        "club": ("\u793e\u56e2", "club"),
+        "valid_club": ("\u53ef\u7528\u793e\u56e2\u5217\u8868\u4e2d\u7684\u793e\u56e2", "a club from the available club list"),
+        "loaded_clubs": ("\u8bf7\u5148\u767b\u5f55\u5e76\u5237\u65b0\u793e\u56e2", "please sign in and fetch clubs first"),
+        "date": ("\u6d3b\u52a8\u65e5\u671f", "activity date"),
+        "date_range": ("\u5f00\u59cb\u548c\u7ed3\u675f\u65e5\u671f", "start and end dates"),
+        "activity_detail": ("\u6d3b\u52a8\u4e3b\u9898\u6216\u6d3b\u52a8\u63cf\u8ff0", "activity theme or description"),
+        "reflection_detail": ("\u53cd\u601d\u5185\u5bb9\u6216\u7ecf\u5386\u80cc\u666f", "reflection focus or experience details"),
+        "batch_detail": ("\u6bcf\u5468\u6d3b\u52a8\u5185\u5bb9\u6216\u793e\u56e2\u63cf\u8ff0", "weekly activity details or club description"),
+        "hours": ("C/A/S \u5c0f\u65f6", "C/A/S hours"),
+    }
+    items = [labels.get(m, (m, m))[0 if zh else 1] for m in missing]
+    if missing == ["loaded_clubs"]:
+        return items[0] + "\u3002" if zh else items[0].capitalize() + "."
+    if len(items) == 1:
+        return ("\u8bf7\u544a\u8bc9\u6211" + items[0] + "\u3002") if zh else f"Please tell me the {items[0]}."
+    return ("\u8bf7\u8865\u5145\uff1a" + "\u3001".join(items) + "\u3002") if zh else "Please tell me: " + ", ".join(items) + "."
+
+
+def _missing_required_details(name: str, args: dict, history, user_message: str, attachments, clubs: list) -> list:
+    context = _agent_context_text(history, user_message, attachments)
+    club = safe_str(args.get("club", ""), 200)
+    if not clubs:
+        return ["loaded_clubs"]
+
+    missing = []
+    if not club:
+        missing.append("club")
+    elif not _club_is_valid(club, clubs):
+        missing.append("valid_club")
+
+    if name == "create_activity_record":
+        if not DATE_HINT_RE.search(context):
+            missing.append("date")
+        content_values = [args.get("activity_desc", ""), args.get("theme", "")]
+        if not _has_supported_content(content_values, context, club):
+            missing.append("activity_detail")
+        if not _has_explicit_hours(context):
+            missing.append("hours")
+    elif name == "create_reflection":
+        content_values = []
+        for key in ("club_desc",):
+            content_values.append(args.get(key, ""))
+        for key in ("titles", "desc_lines"):
+            raw = args.get(key, [])
+            if isinstance(raw, list):
+                content_values.extend(x for x in raw if isinstance(x, str))
+        if not _has_supported_content(content_values, context, club):
+            missing.append("reflection_detail")
+    elif name == "create_weekly_batch":
+        if len(DATE_HINT_RE.findall(context)) < 2:
+            missing.append("date_range")
+        content_values = [args.get("club_desc", ""), args.get("periodic", "")]
+        if not _has_supported_content(content_values, context, club):
+            missing.append("batch_detail")
+        if not _has_explicit_hours(context):
+            missing.append("hours")
+    return missing
+
+
+def _chat_history_messages_for_budget(history, char_budget: int) -> list:
+    if not isinstance(history, list) or char_budget <= 0:
+        return []
+    picked = []
+    used = 0
+    for h in reversed(history):
+        if not isinstance(h, dict) or h.get("role") not in ("user", "assistant"):
+            continue
+        if not isinstance(h.get("content"), str):
+            continue
+        content = safe_str(h.get("content", ""), max_length=CHAT_MAX_MESSAGE_CHARS).strip()
+        if not content:
+            continue
+        cost = len(content)
+        if used + cost > char_budget:
+            remaining = char_budget - used
+            if remaining > 200:
+                picked.append({"role": h["role"], "content": content[-remaining:]})
+            break
+        picked.append({"role": h["role"], "content": content})
+        used += cost
+    picked.reverse()
+    return picked
 
 
 def build_record_proposal(args: dict) -> dict:
@@ -1402,8 +1587,9 @@ def _force_tool_call(base_messages: list, prior_text: str, thinking_enabled: Opt
     nudged = base_messages + [
         {"role": "assistant", "content": prior_text or "Okay."},
         {"role": "user", "content": (
-            "You already have all the required details. Do NOT reply with text. "
-            "Call the correct function now to create it.")},
+            "If all required details are explicitly present, do NOT reply with text; "
+            "call the correct function now. If a required detail is missing, ask for "
+            "that exact detail instead. Never invent or default dates.")},
     ]
     choices = ("required", "auto")
     for choice in choices:
@@ -1639,7 +1825,7 @@ def chat_cas():
         return jsonify({"error": "Rate limit exceeded. Please wait before sending more messages."}), 429
 
     data = request.json or {}
-    user_message = safe_str(data.get("message", ""), max_length=2000)
+    user_message = safe_str(data.get("message", ""), max_length=CHAT_MAX_MESSAGE_CHARS)
     history = data.get("history", [])
     thinking_enabled = bool(data.get("thinking", False))
     raw_clubs = data.get("clubs", [])
@@ -1682,8 +1868,16 @@ def chat_cas():
         "NOT reply with phrases like 'let me create the record', 'I'll create it now', or 'creating "
         "now'. If you are about to write such a sentence, call the function instead — the app shows "
         "the user an approval card automatically, so you never need to ask for confirmation in text.\n"
-        "- Only ask in plain text if a REQUIRED detail is genuinely missing. Optional fields default "
-        "to sensible values (hours default to 0).\n"
+        "- Ask a short follow-up question when required details are missing or ambiguous. Do not "
+        "guess, invent, or silently fill required details.\n"
+        "- Activity records require: a valid club, activity date, activity theme/description, and "
+        "at least one explicit C/A/S hour value. Use 0 only for C/A/S categories the user omitted "
+        "after giving at least one hour value. NEVER default a missing record date to today's date.\n"
+        "- Reflections require: a valid club (or Conversation when available) and enough experience "
+        "details to write a real reflection. You may infer outcomes and create a concise title, but "
+        "do not invent the student's experience.\n"
+        "- Weekly batch records require: a valid club, start and end dates, weekly activity details "
+        "or club description, and at least one explicit C/A/S hour value.\n"
         "- You may briefly note a concern (e.g. a CAS rule), but you must STILL call the function in "
         "the same turn unless a required detail is missing.\n"
         "- Convert any natural-language date to YYYY/MM/DD. Resolve relative dates using today's date.\n"
@@ -1711,20 +1905,14 @@ def chat_cas():
         system_content += "以下是学校官方提供的IB CAS文档内容，请以此为依据回答问题：\n\n" + CAS_KNOWLEDGE_BASE
 
     messages = [{"role": "system", "content": system_content}]
-    for h in history[-8:]:
-        if isinstance(h, dict) and h.get("role") in ("user", "assistant") and isinstance(h.get("content"), str):
-            content = h["content"][:2000]
-            if content.strip():
-                hist_msg = {"role": h["role"], "content": content}
-                reasoning_content = safe_str(h.get("reasoning_content", ""), max_length=8000)
-                if h["role"] == "assistant" and reasoning_content:
-                    hist_msg["reasoning_content"] = reasoning_content
-                messages.append(hist_msg)  # Truncate history entries
     if attachments:
         blocks = "\n\n".join(f"[Attached file: {nm}]\n{tx}" for nm, tx in attachments)
         messages.append({"role": "system", "content":
                          "The user attached the following file(s). Use their content as context when "
                          "answering or filling forms:\n\n" + blocks})
+    fixed_chars = sum(len(m.get("content", "")) for m in messages) + len(user_message)
+    history_budget = max(0, CHAT_CONTEXT_CHAR_BUDGET - fixed_chars)
+    messages.extend(_chat_history_messages_for_budget(history, history_budget))
     messages.append({"role": "user", "content": user_message})
 
     try:
@@ -1766,6 +1954,9 @@ def chat_cas():
                 args = json.loads(fn.get("arguments", "{}") or "{}")
             except Exception:
                 args = {}
+            missing = _missing_required_details(name, args, history, user_message, attachments, clubs)
+            if missing:
+                return jsonify({"reply": _missing_followup(name, missing, user_message)})
             try:
                 proposal = builder(args)
             except ValueError as ve:
