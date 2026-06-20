@@ -263,36 +263,37 @@
                                     <div class="chat-bubble-inner" data-i18n="chat_welcome">Hello! I'm your IB CAS AI advisor. I can answer CAS questions AND fill in your records, reflections, or weekly batches for you. Just tell me what you need — I'll show you a card to approve before anything is submitted.</div>
                                 </div>
                             </div>
-                            <div class="chat-suggestions" id="chat-suggestions">
-                                <button class="chat-chip" data-i18n="chip_record" onclick="useSuggestion(this)">Log a drama club activity on 2026/03/05, theme 'rehearsal', C 2h</button>
-                                <button class="chat-chip" data-i18n="chip_reflection" onclick="useSuggestion(this)">Write a reflection for my service club on leadership</button>
-                                <button class="chat-chip" data-i18n="chip_help" onclick="useSuggestion(this)">What are the 7 CAS learning outcomes?</button>
-                            </div>
                             <div class="chat-attachments" id="chat-attachments"></div>
                             <div class="chat-input-row">
-                                <div class="chat-plus-wrap">
-                                    <button type="button" class="chat-plus-btn" id="chat-plus-btn" title="Add files or photos" onclick="toggleAttachMenu(event)">+</button>
-                                    <div class="chat-attach-menu" id="chat-attach-menu">
-                                        <button type="button" class="chat-attach-item" onclick="openQuickPanel('record')">
-                                            <span class="chat-attach-ico">+</span><span data-i18n="quick_add_record">Add Record</span>
-                                        </button>
-                                        <button type="button" class="chat-attach-item" onclick="openQuickPanel('reflection')">
-                                            <span class="chat-attach-ico">+</span><span data-i18n="quick_add_reflection">Add Reflection</span>
-                                        </button>
-                                        <button type="button" class="chat-attach-item" onclick="pickFiles()">
-                                            <span class="chat-attach-ico">📎</span><span data-i18n="attach_files">Add files or photos</span>
-                                        </button>
+                                <div class="chat-input-box">
+                                    <textarea id="chat-input" class="form-input chat-input" rows="1" data-i18n-ph="chat_placeholder" placeholder="Ask about IB CAS, or ask me to fill a form..." onkeydown="onChatKeydown(event)" oninput="autoGrowInput(this)"></textarea>
+                                    <div class="chat-input-toolbar">
+                                        <div class="chat-plus-wrap">
+                                            <button type="button" class="chat-plus-btn" id="chat-plus-btn" title="Add files or photos" onclick="toggleAttachMenu(event)">+</button>
+                                            <div class="chat-attach-menu" id="chat-attach-menu">
+                                                <button type="button" class="chat-attach-item" onclick="openQuickPanel('record')">
+                                                    <span class="chat-attach-ico">+</span><span data-i18n="quick_add_record">Add Record</span>
+                                                </button>
+                                                <button type="button" class="chat-attach-item" onclick="openQuickPanel('reflection')">
+                                                    <span class="chat-attach-ico">+</span><span data-i18n="quick_add_reflection">Add Reflection</span>
+                                                </button>
+                                                <button type="button" class="chat-attach-item" onclick="pickFiles()">
+                                                    <span class="chat-attach-ico">📎</span><span data-i18n="attach_files">Add files or photos</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="chat-toolbar-right">
+                                            <label class="chat-thinking-toggle" title="Toggle Qwen Thinking mode">
+                                                <input type="checkbox" id="chat-thinking-toggle" onchange="saveThinkingPreference()">
+                                                <span class="chat-thinking-switch"></span>
+                                                <span class="chat-thinking-text" data-i18n="thinking_toggle">Thinking</span>
+                                            </label>
+                                            <button class="btn btn-accent" id="btn-send-chat" onclick="sendChat()" data-i18n="chat_send">Send</button>
+                                        </div>
                                     </div>
+                                    <input type="file" id="chat-file-input" multiple hidden onchange="onFilesPicked(event)"
+                                           accept=".txt,.md,.csv,.log,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.webp,.bmp,.gif">
                                 </div>
-                                <textarea id="chat-input" class="form-input chat-input" rows="1" data-i18n-ph="chat_placeholder" placeholder="Ask about IB CAS, or ask me to fill a form..." onkeydown="onChatKeydown(event)" oninput="autoGrowInput(this)"></textarea>
-                                <label class="chat-thinking-toggle" title="Toggle Qwen Thinking mode">
-                                    <input type="checkbox" id="chat-thinking-toggle" onchange="saveThinkingPreference()">
-                                    <span class="chat-thinking-switch"></span>
-                                    <span class="chat-thinking-text" data-i18n="thinking_toggle">Thinking</span>
-                                </label>
-                                <button class="btn btn-accent" id="btn-send-chat" onclick="sendChat()" data-i18n="chat_send">Send</button>
-                                <input type="file" id="chat-file-input" multiple hidden onchange="onFilesPicked(event)"
-                                       accept=".txt,.md,.csv,.log,.json,.pdf,.docx,.xlsx,.jpg,.jpeg,.png,.webp,.bmp,.gif">
                             </div>
                             <div class="chat-foot-note" data-i18n="chat_disclaimer">CAS Monster uses AI and may make mistakes. Always review generated content before approving.</div>
                         </div>

@@ -790,11 +790,48 @@ body {
 .chat-bubble-inner.markdown a { color: var(--accent); text-decoration: underline; }
 .chat-input-row {
     display: flex;
-    gap: 8px;
-    align-items: center;
 }
-.chat-input-row .chat-input {
+/* Single rounded container: textarea on top, a toolbar row beneath it with the
+   plus button bottom-left and the Thinking toggle + Send button bottom-right. */
+.chat-input-box {
     flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 10px 8px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: 0 1px 8px var(--shadow-calendar);
+}
+.chat-input-box:focus-within {
+    box-shadow: 0 1px 12px var(--shadow-calendar), 0 0 0 2px var(--accent-soft);
+}
+.chat-input-box .chat-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 6px 6px 0;
+    resize: none;
+}
+.chat-input-box .chat-input:focus {
+    border: none;
+    box-shadow: none;
+    outline: none;
+}
+.chat-input-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.chat-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 .chat-thinking-toggle {
     display: inline-flex;
@@ -1245,8 +1282,6 @@ body.chat-active .chat-suggestions {
 }
 body.chat-active .chat-input-row {
     padding: 10px max(20px, calc((100% - var(--chat-col)) / 2)) 6px;
-    gap: 10px;
-    align-items: flex-end;
     background: linear-gradient(to top, var(--bg) 60%, transparent);
 }
 body.chat-active .chat-foot-note {
@@ -1284,15 +1319,19 @@ body.chat-active .chat-bubble.user .chat-bubble-inner {
 }
 body.chat-active .chat-bubble.thinking .chat-bubble-inner { padding: 2px 0; }
 
-/* Pill-shaped input bar */
+/* Rounded input container holding the textarea + toolbar (Gemini-style). */
+body.chat-active .chat-input-box {
+    border-radius: 28px;
+    padding: 10px 12px 10px 18px;
+    gap: 4px;
+}
 body.chat-active .chat-input {
-    border-radius: 26px;
-    padding: 14px 20px;
+    padding: 6px 6px 0;
     font-size: clamp(16px, 0.4vw + 14.5px, 17.5px);
     line-height: 1.5;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    box-shadow: 0 1px 8px var(--shadow-calendar);
+    background: transparent;
+    border: none;
+    box-shadow: none;
     resize: none;
     overflow-y: hidden;
     overflow-x: hidden;
@@ -1307,18 +1346,18 @@ body.chat-active .chat-input {
     word-break: break-word;
 }
 body.chat-active .chat-input:focus {
-    box-shadow: 0 1px 12px var(--shadow-calendar), 0 0 0 2px var(--accent-soft);
+    border: none;
+    box-shadow: none;
+    outline: none;
 }
 body.chat-active .chat-input-row .btn {
-    border-radius: 24px;
-    padding: 13px 24px;
+    border-radius: 22px;
+    padding: 11px 22px;
     font-size: 15px;
-    align-self: flex-end;
     flex-shrink: 0;
 }
 body.chat-active .chat-thinking-toggle {
-    align-self: center;
-    min-height: 46px;
+    min-height: 0;
 }
 body.chat-active .chat-chip {
     font-size: 14px;
@@ -1388,13 +1427,13 @@ body.chat-active .cas-card-group { width: 100%; max-width: 100%; }
 .chat-foot-note { display: none; }
 .chat-plus-wrap { position: relative; flex-shrink: 0; }
 .chat-plus-btn {
-    width: 46px;
-    height: 46px;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    font-size: 25px;
+    font-size: 22px;
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -1406,7 +1445,7 @@ body.chat-active .cas-card-group { width: 100%; max-width: 100%; }
 .chat-attach-menu {
     display: none;
     position: absolute;
-    bottom: 56px;
+    bottom: 46px;
     left: 0;
     min-width: 220px;
     background: var(--surface);
