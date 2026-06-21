@@ -159,6 +159,7 @@ const I18N = {
         card_cancelled_msg: "Cancelled. Nothing was submitted.",
         card_need_login: "Please sign in first.",
         card_need_outcome: "Please select at least one Learning Outcome.",
+        card_need_fields: "Please fill in the club, date and theme.",
         chat_disclaimer: "CAS Monster uses AI and may make mistakes. Always review generated content before approving.",
         chat_empty: "Sorry, I didn't catch that. Could you rephrase, or tell me the club, date, theme and hours?",
         attach_files: "Add files or photos",
@@ -345,6 +346,7 @@ const I18N = {
         card_cancelled_msg: "\u5DF2\u53D6\u6D88\uFF0C\u672A\u63D0\u4EA4\u4EFB\u4F55\u5185\u5BB9\u3002",
         card_need_login: "\u8BF7\u5148\u767B\u5F55\u3002",
         card_need_outcome: "\u8BF7\u81F3\u5C11\u9009\u62E9\u4E00\u4E2A\u5B66\u4E60\u6210\u679C\u3002",
+        card_need_fields: "\u8BF7\u586B\u5199\u793E\u56E2\u3001\u65E5\u671F\u548C\u4E3B\u9898\u3002",
         chat_disclaimer: "CAS Monster \u7531 AI \u9A71\u52A8\uFF0C\u56DE\u7B54\u672A\u5FC5\u51C6\u786E\u3002\u6279\u51C6\u524D\u8BF7\u52A1\u5FC5\u68C0\u67E5\u751F\u6210\u7684\u5185\u5BB9\u3002",
         chat_empty: "\u62B1\u6B49\uFF0C\u6211\u6CA1\u592A\u7406\u89E3\u3002\u80FD\u518D\u8BF4\u4E00\u904D\u5417\uFF1F\u6216\u76F4\u63A5\u544A\u8BC9\u6211\u793E\u56E2\u3001\u65E5\u671F\u3001\u4E3B\u9898\u548C\u5C0F\u65F6\u6570\u3002",
         attach_files: "\u6DFB\u52A0\u6587\u4EF6\u6216\u7167\u7247",
@@ -2192,12 +2194,34 @@ function renderProposalCard(p, targetContainer) {
     const area = (label, cls, value) =>
         `<div class="cas-content-label">${esc(label)}</div>` +
         `<textarea class="cas-content-box ${cls}">${esc(value)}</textarea>`;
+    // Editable field row: same layout as fr() but the value is an input control
+    // the user can change before approving.
+    const fri = (k, control) =>
+        `<div class="cas-field cas-field-edit"><div class="cas-field-key">${esc(k)}</div>` +
+        `<div class="cas-field-val">${control}</div></div>`;
 
     if (p.action === "record") {
         title = t.card_record_title; icon = "📝";
         const pr = p.params;
-        fields = fr(t.card_club, pr.club_display || pr.club) + fr(t.card_date, pr.date) + fr(t.card_theme, pr.theme) +
-                 fr(t.card_hours, `${pr.c_hours} / ${pr.a_hours} / ${pr.s_hours}`);
+        // Club: a dropdown of the student's record clubs so it stays a valid name.
+        const recClubs = (availableRecordClubs && availableRecordClubs.length
+            ? availableRecordClubs : (availableClubs || [])).slice();
+        if (pr.club && recClubs.indexOf(pr.club) === -1) recClubs.unshift(pr.club);
+        const clubControl = recClubs.length
+            ? `<select class="cas-edit cas-edit-club">` +
+              recClubs.map((c) => `<option value="${esc(c)}"${c === pr.club ? " selected" : ""}>${esc(c)}</option>`).join("") +
+              `</select>`
+            : `<input type="text" class="cas-edit cas-edit-club" value="${esc(pr.club)}">`;
+        const dateVal = String(pr.date || "").replace(/\//g, "-");
+        const hours = `<span class="cas-edit-hours-wrap">` +
+            `C<input type="number" min="0" step="0.5" class="cas-edit cas-edit-hour" data-h="c" value="${esc(pr.c_hours)}">` +
+            `A<input type="number" min="0" step="0.5" class="cas-edit cas-edit-hour" data-h="a" value="${esc(pr.a_hours)}">` +
+            `S<input type="number" min="0" step="0.5" class="cas-edit cas-edit-hour" data-h="s" value="${esc(pr.s_hours)}">` +
+            `</span>`;
+        fields = fri(t.card_club, clubControl) +
+                 fri(t.card_date, `<input type="date" class="cas-edit cas-edit-date" value="${esc(dateVal)}">`) +
+                 fri(t.card_theme, `<input type="text" class="cas-edit cas-edit-theme" value="${esc(pr.theme)}">`) +
+                 fri(t.card_hours, hours);
         content = area(t.card_description, "cas-desc", p.content.description);
     } else if (p.action === "reflection") {
         title = t.card_reflection_title; icon = "💭";
@@ -2271,8 +2295,26 @@ function approveCard(id) {
     const acc = { username: CURRENT_USER, password: CURRENT_PW };
 
     if (p.action === "record") {
+        // Read the (possibly edited) fields off the card instead of the original
+        // proposal, so user edits to club/date/theme/hours/description are honoured.
+        const clubEl = card.querySelector(".cas-edit-club");
+        const club = (clubEl ? clubEl.value : p.params.club).trim();
+        const dateEl = card.querySelector(".cas-edit-date");
+        const date = (dateEl ? dateEl.value : p.params.date).trim().replace(/-/g, "/");
+        const themeEl = card.querySelector(".cas-edit-theme");
+        const theme = (themeEl ? themeEl.value : p.params.theme).trim();
+        let c = p.params.c_hours, a = p.params.a_hours, s = p.params.s_hours;
+        card.querySelectorAll(".cas-edit-hour").forEach((el) => {
+            const v = el.value.trim() || "0";
+            if (el.dataset.h === "c") c = v;
+            else if (el.dataset.h === "a") a = v;
+            else if (el.dataset.h === "s") s = v;
+        });
         const desc = card.querySelector(".cas-desc").value;
-        socket.emit("run_record", { ...acc, ...p.params, description: desc });
+        if (!club || !date || !theme) { alert(t.card_need_fields || "Please fill in club, date and theme."); return false; }
+        socket.emit("run_record", {
+            ...acc, club, date, theme, c_hours: c, a_hours: a, s_hours: s, description: desc,
+        });
         submittingCards.record.push(id);
     } else if (p.action === "reflection") {
         const outcomes = Array.from(card.querySelectorAll(".cas-outcome-cb:checked")).map((e) => e.value);
@@ -2297,7 +2339,7 @@ function approveCard(id) {
 
     setButtonsRunning(true);
     // Lock the card into a submitting state.
-    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    card.querySelectorAll("button, textarea, input, select").forEach((e) => (e.disabled = true));
     setCardBadge(card, t.card_badge_running, "is-running");
     let status = card.querySelector(".cas-card-status");
     if (!status) {
@@ -2315,7 +2357,7 @@ function setCardQueued(id) {
     const card = document.getElementById(id);
     if (!card) return;
     const t = I18N[currentLang];
-    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    card.querySelectorAll("button, textarea, input, select").forEach((e) => (e.disabled = true));
     card.classList.add("is-queued");
     setCardBadge(card, t.card_badge_queued || "Queued");
     let status = card.querySelector(".cas-card-status");
@@ -2365,7 +2407,7 @@ function cancelCard(id) {
     if (!card) return;
     const t = I18N[currentLang];
     delete cardProposals[id];
-    card.querySelectorAll("button, textarea, input").forEach((e) => (e.disabled = true));
+    card.querySelectorAll("button, textarea, input, select").forEach((e) => (e.disabled = true));
     setCardBadge(card, t.card_badge_cancelled, "is-cancelled");
     let status = card.querySelector(".cas-card-status");
     if (!status) {

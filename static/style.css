@@ -2638,3 +2638,49 @@ body.chat-active .chat-bubble.assistant .chat-bubble-inner {
 @media (prefers-reduced-motion: reduce) {
     .chat-attach-menu { transition: opacity 0.12s ease; transform: none; }
 }
+
+/* ---- Editable approval-card fields ------------------------------------- */
+/* Club / date / theme / hours become inline controls the user can change on
+   the card before approving. */
+.cas-field-edit { align-items: center; }
+.cas-edit {
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--bg);
+    border: 1px solid var(--border-light);
+    border-radius: 7px;
+    padding: 6px 9px;
+    font: inherit;
+    font-size: 14px;
+    color: var(--text);
+}
+.cas-edit:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+}
+select.cas-edit, input.cas-edit-date { cursor: pointer; }
+.cas-edit-hours-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+}
+.cas-edit-hour { width: 62px; text-align: center; padding: 6px; }
+
+/* The description (and reflection) textareas grow with their content up to about
+   10 lines, then scroll. Modern browsers size natively via `field-sizing`; the
+   JS autoGrow() is the fallback for browsers without it. Without this rule the
+   textarea collapsed to its min-height because autoGrow() defers to CSS here. */
+@supports (field-sizing: content) {
+    textarea.cas-content-box {
+        field-sizing: content;
+        max-height: calc(1.65em * 10 + 24px);
+        overflow-y: auto;
+    }
+    textarea.cas-refl-summary {
+        max-height: calc(1.65em * 4 + 24px);
+    }
+}
