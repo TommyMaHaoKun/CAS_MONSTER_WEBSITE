@@ -538,10 +538,15 @@ socket.on("disconnect", () => {
     // Don't leave the chat input frozen if a stream was mid-flight.
     if (chatStream) {
         if (chatStream.dotsBubble) { chatStream.dotsBubble.remove(); chatStream.dotsBubble = null; }
-        if (!chatStream.answerText && !chatStream.cardShown) {
+        if (chatStream.answerText || chatStream.cardShown) {
+            // There's already an answer (or card) on screen. Finalise it so the
+            // Markdown actually renders instead of leaving the raw streamed text
+            // (e.g. literal "**bold**") behind, and so it is saved to history.
+            finalizeChatStream({});
+        } else {
             appendChatBubble("assistant", "Network error: connection lost.");
+            endChatStream();
         }
-        endChatStream();
     }
 });
 
@@ -1859,7 +1864,12 @@ function finalizeChatStream(d) {
         if (reply) {
             // Swap the plain streamed segments for the final Markdown render.
             st.answerInner.classList.remove("streaming");
-            st.answerInner.innerHTML = renderMarkdown(reply);
+            try {
+                st.answerInner.innerHTML = renderMarkdown(reply);
+            } catch (e) {
+                // Never leave the user staring at raw markdown if rendering fails.
+                st.answerInner.textContent = reply;
+            }
         } else if (st.answerBubble) {
             st.answerBubble.remove();
             st.answerBubble = null;
