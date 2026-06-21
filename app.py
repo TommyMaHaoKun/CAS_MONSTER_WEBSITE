@@ -1497,95 +1497,6 @@ def _club_is_valid(club: str, clubs: list) -> bool:
     return bool(club) and (not clubs or club in clubs)
 
 
-def _missing_followup(action: str, missing: list, user_message: str) -> str:
-    zh = _looks_chinese(user_message)
-    labels = {
-        "club": ("\u793e\u56e2", "club"),
-        "valid_club": ("\u53ef\u7528\u793e\u56e2\u5217\u8868\u4e2d\u7684\u793e\u56e2", "a club from the available club list"),
-        "loaded_clubs": ("\u8bf7\u5148\u767b\u5f55\u5e76\u5237\u65b0\u793e\u56e2", "please sign in and fetch clubs first"),
-        "date": ("\u6d3b\u52a8\u65e5\u671f", "activity date"),
-        "date_range": ("\u5f00\u59cb\u548c\u7ed3\u675f\u65e5\u671f", "start and end dates"),
-        "activity_detail": ("\u6d3b\u52a8\u4e3b\u9898\u6216\u6d3b\u52a8\u63cf\u8ff0", "activity theme or description"),
-        "reflection_detail": ("\u53cd\u601d\u5185\u5bb9\u6216\u7ecf\u5386\u80cc\u666f", "reflection focus or experience details"),
-        "batch_detail": ("\u6bcf\u5468\u6d3b\u52a8\u5185\u5bb9\u6216\u793e\u56e2\u63cf\u8ff0", "weekly activity details or club description"),
-        "hours": ("C/A/S \u5c0f\u65f6", "C/A/S hours"),
-    }
-    items = [labels.get(m, (m, m))[0 if zh else 1] for m in missing]
-    if missing == ["loaded_clubs"]:
-        return items[0] + "\u3002" if zh else items[0].capitalize() + "."
-    if len(items) == 1:
-        return ("\u8bf7\u544a\u8bc9\u6211" + items[0] + "\u3002") if zh else f"Please tell me the {items[0]}."
-    return ("\u8bf7\u8865\u5145\uff1a" + "\u3001".join(items) + "\u3002") if zh else "Please tell me: " + ", ".join(items) + "."
-
-
-def _missing_required_details(name: str, args: dict, history, user_message: str, attachments, clubs: list) -> list:
-    context = _agent_context_text(history, user_message, attachments)
-    club = safe_str(args.get("club", ""), 200)
-    if not clubs:
-        return ["loaded_clubs"]
-
-    missing = []
-    if name == "create_bulk_activity_records":
-        records = args.get("records", [])
-        if not isinstance(records, list) or not records:
-            missing.append("activity_detail")
-        else:
-            for raw in records:
-                row_club = safe_str(raw.get("club", ""), 200) if isinstance(raw, dict) else ""
-                if not row_club:
-                    missing.append("club")
-                    break
-                if not _club_is_valid(row_club, clubs):
-                    missing.append("valid_club")
-                    break
-        if not DATE_HINT_RE.search(context):
-            missing.append("date")
-        row_hours = []
-        if isinstance(records, list):
-            for raw in records:
-                if isinstance(raw, dict):
-                    row_hours += [raw.get("c_hours"), raw.get("a_hours"), raw.get("s_hours")]
-        if not _has_explicit_hours(context) and not _has_positive_hours(*row_hours):
-            missing.append("hours")
-        return missing
-
-    if not club:
-        missing.append("club")
-    elif not _club_is_valid(club, clubs):
-        missing.append("valid_club")
-
-    if name == "create_activity_record":
-        if not DATE_HINT_RE.search(context):
-            missing.append("date")
-        content_values = [args.get("activity_desc", ""), args.get("description", ""),
-                          args.get("desc", ""), args.get("activity", ""), args.get("theme", "")]
-        if not _has_supported_content(content_values, context, club):
-            missing.append("activity_detail")
-        if not _has_explicit_hours(context) and not _has_positive_hours(
-                args.get("c_hours"), args.get("a_hours"), args.get("s_hours")):
-            missing.append("hours")
-    elif name == "create_reflection":
-        content_values = []
-        for key in ("club_desc",):
-            content_values.append(args.get(key, ""))
-        for key in ("titles", "desc_lines"):
-            raw = args.get(key, [])
-            if isinstance(raw, list):
-                content_values.extend(x for x in raw if isinstance(x, str))
-        if not _has_supported_content(content_values, context, club):
-            missing.append("reflection_detail")
-    elif name == "create_weekly_batch":
-        if len(DATE_HINT_RE.findall(context)) < 2:
-            missing.append("date_range")
-        content_values = [args.get("club_desc", ""), args.get("periodic", "")]
-        if not _has_supported_content(content_values, context, club):
-            missing.append("batch_detail")
-        if not _has_explicit_hours(context) and not _has_positive_hours(
-                args.get("c_hours"), args.get("a_hours"), args.get("s_hours")):
-            missing.append("hours")
-    return missing
-
-
 def _chat_history_messages_for_budget(history, char_budget: int) -> list:
     if not isinstance(history, list) or char_budget <= 0:
         return []
@@ -1761,19 +1672,6 @@ _PROPOSAL_BUILDERS = {
     "create_reflection": build_reflection_proposal,
 }
 
-# Detects when the assistant *says* it will act but forgot to actually call a tool
-# (e.g. "let me create the record now", "I'll proceed", "让我现在创建记录").
-_INTENT_EN = re.compile(
-    r"(let me(?! know)|i['’]?ll|i will|i'?m going to|i am going to|i'?ll go ahead|let me go ahead|"
-    r"i'?ll proceed|let me proceed)\b"
-    r"[^.!?\n]{0,80}?\b(creat|fill|add|submit|log|make|proceed|generat|draft|set up|set a)",
-    re.I,
-)
-_INTENT_ZH = re.compile(
-    r"(让我|我来|我帮你?|我现在就|这就)[^。！？\n]{0,40}?(创建|填写|提交|添加|生成|帮你填|做一个|起草|记录|反思)"
-)
-
-
 def _first_tool_call(msg: dict):
     tcs = msg.get("tool_calls") or []
     return tcs[0] if tcs else None
@@ -1809,35 +1707,6 @@ def _tool_call_from_text(text: str):
         if isinstance(fn_name, str) and fn_name in _PROPOSAL_BUILDERS:
             args_str = args if isinstance(args, str) else json.dumps(args if isinstance(args, dict) else {}, ensure_ascii=False)
             return {"function": {"name": fn_name, "arguments": args_str}}
-    return None
-
-
-def _force_tool_call(base_messages: list, prior_text: str, thinking_enabled: Optional[bool] = None):
-    """Re-prompt the model to actually emit a function call when it stalled.
-
-    Tries tool_choice='required' (forces a call) and falls back to 'auto' with an
-    explicit instruction. Returns a tool_call dict or None. Best-effort: any API
-    error is swallowed so the caller can fall back to plain text.
-    """
-    nudged = base_messages + [
-        {"role": "assistant", "content": prior_text or "Okay."},
-        {"role": "user", "content": (
-            "If all required details are explicitly present, do NOT reply with text; "
-            "call the correct function now. If a required detail is missing, ask for "
-            "that exact detail instead. Never invent or default dates.")},
-    ]
-    choices = ("required", "auto")
-    for choice in choices:
-        try:
-            r = llm_chat(LLM_API_KEY, LLM_MODEL, nudged,
-                              temperature=0.1, max_tokens=600,
-                              tools=CAS_TOOLS, tool_choice=choice,
-                              thinking_enabled=False)
-            call = _first_tool_call(r["choices"][0]["message"])
-            if call:
-                return call
-        except Exception:
-            continue
     return None
 
 
@@ -2493,9 +2362,19 @@ def _build_cas_messages(user_message: str, history: list, clubs: list, attachmen
         "Global Value, Ethics, New Skills.\n\n"
     )
     if clubs:
-        system_content += "Available clubs (choose exactly one of these names):\n- " + "\n- ".join(clubs) + "\n\n"
+        system_content += (
+            "The clubs listed below are the ones THIS student is currently enrolled in / has "
+            "joined — they were fetched live from the student's own school account. So when the "
+            "student asks which clubs they joined or are in, answer directly and naturally from "
+            "this list (it is authoritative for that question). When filling a form, choose "
+            "exactly one of these names:\n- " + "\n- ".join(clubs) + "\n\n"
+        )
     else:
-        system_content += "No clubs have been loaded yet; if the user wants to fill a form, ask them to log in / fetch clubs first.\n\n"
+        system_content += (
+            "No clubs have been loaded yet (the student has not signed in / fetched clubs). If the "
+            "student asks which clubs they joined, or wants to fill a form, explain that you can "
+            "only see their clubs after they sign in and fetch clubs first.\n\n"
+        )
     if CAS_KNOWLEDGE_BASE:
         system_content += "以下是学校官方提供的IB CAS文档内容，请以此为依据回答问题：\n\n" + CAS_KNOWLEDGE_BASE
 
@@ -2518,7 +2397,14 @@ def _resolve_tool_call(call, text, reasoning, history, user_message, attachments
     Returns one of:
       ("proposal", proposal_dict, reasoning)
       ("proposals", proposal_list, reasoning)
-      ("reply", text, reasoning)   # missing details / invalid args / unknown fn
+      ("reply", text, reasoning)   # not signed in / invalid args / unknown fn
+
+    We trust the model's natural-language understanding: if it decided to call a
+    function, we build the proposal from its arguments. We do NOT re-derive intent
+    or "missing details" with regexes/keyword matching — the model is responsible
+    for asking the user (in its own words) when something it needs is missing. The
+    only hard gates left are real state/validity checks: the student must be signed
+    in, and the builder must accept the arguments.
     """
     fn = call.get("function", {}) or {}
     name = fn.get("name", "")
@@ -2529,9 +2415,11 @@ def _resolve_tool_call(call, text, reasoning, history, user_message, attachments
         args = json.loads(fn.get("arguments", "{}") or "{}")
     except Exception:
         args = {}
-    missing = _missing_required_details(name, args, history, user_message, attachments, clubs)
-    if missing:
-        return ("reply", _missing_followup(name, missing, user_message), reasoning)
+    if not clubs:
+        zh = _looks_chinese(user_message)
+        msg = ("我还看不到你的社团，请先登录并刷新社团，然后我就能帮你填写了。" if zh
+               else "I can't see your clubs yet — please sign in and fetch your clubs first, then I can fill it in.")
+        return ("reply", msg, reasoning)
     try:
         proposal = builder(args)
     except ValueError as ve:
@@ -2586,15 +2474,6 @@ def chat_cas():
             call = _tool_call_from_text(text)
             if call:
                 text = ""
-
-        # Fallback: the model said it would act (or returned nothing) but never
-        # emitted a tool call. Force the call so the user actually gets a card.
-        if not call and clubs:
-            stalled = bool(_INTENT_EN.search(text) or _INTENT_ZH.search(text))
-            if stalled or not text:
-                forced = _force_tool_call(messages, text, thinking_enabled=False)
-                if forced:
-                    call = forced
 
         if not call and thinking_enabled:
             thinking_resp = llm_chat(LLM_API_KEY, LLM_MODEL, messages,
@@ -2707,12 +2586,6 @@ def _stream_chat(sid, data):
         msg = resp["choices"][0]["message"]
         text = (msg.get("content") or "").strip()
         call = _first_tool_call(msg) or _tool_call_from_text(text)
-        if not call and clubs:
-            stalled = bool(_INTENT_EN.search(text) or _INTENT_ZH.search(text))
-            if stalled or not text:
-                forced = _force_tool_call(messages, text, thinking_enabled=False)
-                if forced:
-                    call = forced
         if call:
             finish_call(call, text, "", streamed_any=False)
             return
@@ -2767,12 +2640,6 @@ def _stream_chat(sid, data):
 
     text = full.strip()
     call = _tool_state_to_call(tool_state) or _tool_call_from_text(text)
-    if not call and clubs:
-        stalled = bool(_INTENT_EN.search(text) or _INTENT_ZH.search(text))
-        if stalled or not text:
-            forced = _force_tool_call(messages, text, thinking_enabled=False)
-            if forced:
-                call = forced
     if call:
         finish_call(call, "" if suppress else text, "", streamed_any=emitted > 0)
         return
