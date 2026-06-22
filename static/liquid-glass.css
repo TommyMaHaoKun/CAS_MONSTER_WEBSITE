@@ -1,0 +1,71 @@
+/* ============================================================================
+ * liquid-glass-refract — companion stylesheet
+ * ----------------------------------------------------------------------------
+ * Provides the base material for any element the library attaches to:
+ *   • a translucent fill (so the refracted backdrop is visible),
+ *   • a clipping/stacking context for the specular overlay,
+ *   • the specular rim highlight injected by liquid-glass.js,
+ *   • the non-Chromium frosted-glass fallback.
+ *
+ * The CAS Monster theme (style.css) already paints rich --glass-* fills, rims
+ * and shadows on the major surfaces, so this file is intentionally light and
+ * only fills the gaps. Backgrounds must stay semi-transparent for refraction
+ * to read — never use a fully opaque fill on a .liquid-glass element.
+ * ========================================================================== */
+
+.liquid-glass {
+  position: relative;
+  isolation: isolate;
+  /* Default translucent fill — only used if the theme hasn't set one. */
+  background-color: rgba(255, 255, 255, 0.06);
+  /* No overflow:hidden — the specular layer is mask-rounded, and clipping here
+     would crop pop-out menus (e.g. the chat attach menu inside .chat-input-box). */
+}
+.liquid-glass > *:not(.lg-specular) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Specular rim: a thin band of light riding the bezel, brightest top-left.
+   Sits above the refracted backdrop but below the element's own content. */
+.lg-specular {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  /* edge sheen */
+  background:
+    linear-gradient(135deg,
+      rgba(255, 255, 255, 0.55) 0%,
+      rgba(255, 255, 255, 0.08) 22%,
+      rgba(255, 255, 255, 0) 46%,
+      rgba(255, 255, 255, 0) 64%,
+      rgba(255, 255, 255, 0.14) 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+          mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  padding: 1.5px;
+  mix-blend-mode: screen;
+  opacity: 0.9;
+}
+[data-theme="dark"] .lg-specular { opacity: 0.7; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-specular { transition: none; }
+}
+
+/* Non-Chromium engines: the JS only sets a plain blur backdrop-filter, so make
+   sure the material still reads as frosted glass even without refraction. */
+.lg-no-refract .liquid-glass {
+  background-color: rgba(255, 255, 255, 0.10);
+}
+[data-theme="dark"].lg-no-refract .liquid-glass,
+.lg-no-refract [data-theme="dark"] .liquid-glass {
+  background-color: rgba(40, 42, 66, 0.28);
+}
